@@ -1,0 +1,13 @@
+{
+  "models_dir": "C:\\AI_Models",
+  "llm_model": "C:\\AI_Models\\qwen2-vl-2b\\llmmodel.onnx",
+  "vision_model": "C:\\AI_Models\\qwen2-vl-2b\\visionmodel.onnx",
+  "embedding_model": "C:\\AI_Models\\bge_small_embedding\\model.onnx",
+  "stt_encoder": "C:\\AI_Models\\whisper_tiny_onnx\\encoder_model.onnx",
+  "stt_decoder": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model.onnx",
+  "stt_decoder_merged": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model_merged.onnx",
+  "stt_decoder_with_past": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model_with_past.onnx",
+  "tts_model": "C:\\AI_Models\\kokoro_tts_onnx\\model.onnx",
+  "classifier_model": "C:\\AI_Models\\bge_reranker\\model.onnx",
+  "silero_vad_model": "C:\\AI_Models\\silero_vad.onnx"
+}

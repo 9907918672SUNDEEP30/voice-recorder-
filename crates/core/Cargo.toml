@@ -1,0 +1,10 @@
+[package]
+name = "ai_core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Core Engine Team"]
+description = "High-performance, zero-bloat, application-agnostic AI Agent Runtime Core Engine"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Zero third-party dependencies: strictly Rust standard library

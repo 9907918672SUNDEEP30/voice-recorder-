@@ -1,0 +1,21 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Executables & Debug binaries
+*.exe
+*.pdb
+*.dll
+*.so
+*.dylib
+
+# Model files / Weights (keep models directory structure, ignore huge weights if needed)
+models/*.onnx
+models/*.bin
+models/*.safetensors

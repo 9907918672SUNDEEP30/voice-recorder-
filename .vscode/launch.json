@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug ai_core_framework",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ai_core_framework",
+                    "--package=ai_core_framework"
+                ],
+                "filter": {
+                    "name": "ai_core_framework",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
