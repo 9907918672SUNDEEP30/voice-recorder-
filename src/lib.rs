@@ -2,17 +2,17 @@ pub mod agent_trait;
 pub mod audio;
 pub mod ml_bridge;
 pub mod config;
+pub mod models;
+pub mod steps;
+
 use anyhow::Result;
 use std::fs;
 use std::path::Path;
 
 pub fn init_engine() -> Result<()> {
-    // 🛠️ DLL का स्थायी पाथ सेट करना ताकि रनटाइम फेल न हो
-    std::env::set_var(
-        "ORT_DYLIB_PATH", 
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\152.0.4191.53\onnxruntime.dll"
-    );
-
+    // ORT_DYLIB_PATH is no longer hardcoded here. 
+    // We rely on ort's default binary management to avoid unsafe set_var 
+    // and hardcoded browser version paths.
     Ok(())
 }
 
@@ -36,19 +36,14 @@ pub fn search_and_verify_onnx(dir: &Path) -> Result<i32> {
                         .to_string_lossy();
 
                     println!("📦 मॉडल मिला [{}] -> '{}'", parent_folder, file_name);
-                    print!("   └─ ⚡ DirectML GPU लोड टेस्ट: ");
+                    print!("   └─ 🔄 मॉडल लोड टेस्ट (Auto EP Fallback): ");
 
-                  // C++ boundary crashes are avoided via a safe panic guard while registering the DirectML EP.
-let session_result = std::panic::catch_unwind(|| {
-    ort::session::Session::builder()?
-        .with_execution_providers([
-            ort::ep::DirectML::default().into(),
-        ])?
-        .commit_from_file(&path)
-});
+                    let session_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        ml_bridge::MLBridge::create_session_with_target(&path, ml_bridge::ExecutionTarget::Auto)
+                    }));
 
                     match session_result {
-                        Ok(Ok(_)) => println!("✅ सफल! (Model running on GPU via DirectML)"),
+                        Ok(Ok((_session, active_hw))) => println!("✅ सफल! ({})", active_hw),
                         Ok(Err(e)) => println!("❌ लोड फेल: {}", e),
                         Err(_) => println!("❌ क्रैश प्रिवेंटेड: C++ बाउंड्री पर एरर आया!"),
                     }

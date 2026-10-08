@@ -1,13 +1,45 @@
 {
+  "execution_device": "auto",
   "models_dir": "C:\\AI_Models",
-  "llm_model": "C:\\AI_Models\\qwen2-vl-2b\\llmmodel.onnx",
-  "vision_model": "C:\\AI_Models\\qwen2-vl-2b\\visionmodel.onnx",
-  "embedding_model": "C:\\AI_Models\\bge_small_embedding\\model.onnx",
-  "stt_encoder": "C:\\AI_Models\\whisper_tiny_onnx\\encoder_model.onnx",
-  "stt_decoder": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model.onnx",
-  "stt_decoder_merged": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model_merged.onnx",
-  "stt_decoder_with_past": "C:\\AI_Models\\whisper_tiny_onnx\\decoder_model_with_past.onnx",
-  "tts_model": "C:\\AI_Models\\kokoro_tts_onnx\\model.onnx",
-  "classifier_model": "C:\\AI_Models\\bge_reranker\\model.onnx",
-  "silero_vad_model": "C:\\AI_Models\\silero_vad.onnx"
+  "models": {
+    "silero_vad": {
+      "path": "silero_vad.onnx",
+      "input_names": ["input", "state", "sr"],
+      "output_names": ["output", "stateN"],
+      "sample_rate": 16000,
+      "chunk_size": 512,
+      "state_shape": [2, 1, 128],
+      "threshold": 0.5
+    },
+    "bge_small_embedding": {
+      "path": "bge_small_embedding/model.onnx",
+      "input_names": ["input_ids", "attention_mask", "token_type_ids"],
+      "output_names": ["last_hidden_state"],
+      "max_sequence_length": 512,
+      "embedding_dimension": 384
+    },
+    "whisper_encoder": {
+      "path": "whisper_tiny_onnx/encoder_model.onnx",
+      "input_names": ["input_features"],
+      "output_names": ["last_hidden_state"],
+      "feature_dimensions": [1, 80, 3000]
+    },
+    "bge_reranker": {
+      "path": "bge_reranker/model.onnx",
+      "input_names": ["input_ids", "attention_mask"],
+      "output_names": ["logits"],
+      "max_sequence_length": 512
+    },
+    "qwen_llm": {
+      "path": "qwen2-vl-2b/llmmodel.onnx",
+      "input_names": ["input_ids", "attention_mask"],
+      "output_names": ["logits"]
+    },
+    "kokoro_tts": {
+      "path": "kokoro_tts_onnx/model.onnx",
+      "input_names": ["tokens", "style", "speed"],
+      "output_names": ["audio"],
+      "sample_rate": 24000
+    }
+  }
 }

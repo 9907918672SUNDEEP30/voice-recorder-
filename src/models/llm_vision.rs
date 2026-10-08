@@ -1,28 +1,24 @@
 use anyhow::Result;
-use ort::session::Session;
-use crate::config::AppConfig;
+use crate::config::{AppConfig, ModelProfile};
 use crate::ml_bridge::MLBridge;
 
+/// Vision / Multimodal LLM ONNX Model Runner
+/// Config-driven session loading via MLBridge.
 pub struct LlmVisionModel {
-    pub session: Session,
-    pub model_path: String,
+    pub bridge: MLBridge,
+    pub model_key: String,
+    pub profile: ModelProfile,
 }
 
 impl LlmVisionModel {
-    pub fn new(config: &AppConfig) -> Result<Self> {
-        let path = &config.vision_model;
-        
-        println!("📂 LLM Vision Model Path: {}", path);
-        let session = MLBridge::create_session(path)?;
-        
+    pub fn new(bridge: MLBridge, config: &AppConfig, model_key: &str) -> Result<Self> {
+        let profile = config.get_model(model_key)?.clone();
         Ok(Self {
-            session,
-            model_path: path.clone(),
+            bridge,
+            model_key: model_key.to_string(),
+            profile,
         })
     }
 
-    pub fn generate(&self, prompt: &str) -> Result<()> {
-        println!("🤖 LLM Vision prompt process kar raha hai: {}", prompt);
-        Ok(())
-    }
+    // TODO: Implement forward/inference logic here using MLBridge
 }

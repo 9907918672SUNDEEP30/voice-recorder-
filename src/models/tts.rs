@@ -1,28 +1,28 @@
 use anyhow::Result;
-use ort::session::Session;
-use crate::config::AppConfig;
+use crate::config::{AppConfig, ModelProfile};
 use crate::ml_bridge::MLBridge;
 
+/// Text-to-Speech (TTS) ONNX Tensor Runner
+/// Config-driven sample rate and dynamic session access.
 pub struct TtsModel {
-    pub session: Session,
-    pub model_path: String,
+    pub bridge: MLBridge,
+    pub model_key: String,
+    pub profile: ModelProfile,
 }
 
 impl TtsModel {
-    pub fn new(config: &AppConfig) -> Result<Self> {
-        let path = &config.tts_model;
-        
-        println!("📂 TTS Model Path: {}", path);
-        let session = MLBridge::create_session(path)?;
-        
+    pub fn new(bridge: MLBridge, config: &AppConfig, model_key: &str) -> Result<Self> {
+        let profile = config.get_model(model_key)?.clone();
         Ok(Self {
-            session,
-            model_path: path.clone(),
+            bridge,
+            model_key: model_key.to_string(),
+            profile,
         })
     }
 
-    pub fn synthesize(&self, text: &str) -> Result<()> {
-        println!("🔊 TTS text ko speech me convert kar raha hai: {}", text);
-        Ok(())
+    pub fn sample_rate(&self) -> Option<u32> {
+        self.profile.sample_rate
     }
+
+    // TODO: Implement forward/synthesize logic here using MLBridge
 }

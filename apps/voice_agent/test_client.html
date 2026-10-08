@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice AI Calling Agent - Browser Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #1e1e1e; color: white; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; margin: 10px; }
+        #startBtn { background-color: #4CAF50; color: white; }
+        #stopBtn { background-color: #f44336; color: white; }
+        #status { margin-top: 20px; font-size: 16px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h2>🎤 Voice AI Agent - Browser Test (Shambhavi AI Lab)</h2>
+    <button id="startBtn">Start Call (Connect to Rust)</button>
+    <button id="stopBtn" disabled>End Call</button>
+    <p id="status">Status: Disconnected</p>
+
+    <script>
+        let ws;
+        let audioContext;
+        let mediaStream;
+        let processor;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusText = document.getElementById('status');
+
+        startBtn.onclick = async () => {
+            statusText.innerText = "Status: Connecting to Rust WS...";
+            ws = new WebSocket('ws://localhost:3000/ws/telephony');
+            
+            ws.onopen = async () => {
+                statusText.innerText = "Status: Connected! You can speak now.";
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                // 1. Setup Audio Playback (From Rust to Browser)
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                
+                // 2. Setup Microphone Capture (From Browser to Rust)
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                
+                // Use ScriptProcessor for capturing raw PCM (deprecated but works well for simple tests)
+                processor = audioContext.createScriptProcessor(4096, 1, 1);
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                processor.onaudioprocess = (e) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        const float32Array = e.inputBuffer.getChannelData(0);
+                        // Convert Float32 to Int16 for Rust
+                        const int16Array = new Int16Array(float32Array.length);
+                        for (let i = 0; i < float32Array.length; i++) {
+                            int16Array[i] = Math.max(-32768, Math.min(32767, float32Array[i] * 32768));
+                        }
+                        // Note: For real G.711 test, you'd encode to u-law here, 
+                        // but for browser testing, we can send PCM or handle it in Rust.
+                        ws.send(int16Array.buffer); 
+                    }
+                };
+            };
+
+            ws.onmessage = async (event) => {
+                if (event.data instanceof Blob) {
+                    // Play incoming audio from Rust Agent
+                    const arrayBuffer = await event.data.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContext.destination);
+                    source.start();
+                }
+            };
+
+            ws.onclose = () => {
+                statusText.innerText = "Status: Disconnected";
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                if (processor) processor.disconnect();
+                if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+            };
+        };
+
+        stopBtn.onclick = () => {
+            if (ws) ws.close();
+        };
+    </script>
+</body>
+</html>
