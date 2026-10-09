@@ -109,3 +109,7 @@ Telephony WebSocket server listening on ws://0.0.0.0:3000/ws/telephony
 ---
 
 **शुभकामनाएं! आपका Voice AI प्रोजेक्ट अब पूरी तरह से आपके नियंत्रण में है।**
+
+## Update: Advanced Streaming & Memory
+- **Streaming STT & TTS:** Implemented sentence-by-sentence TTS and sliding window STT for ultra-low latency.
+- **Contextual Memory:** Added conversation history tracking and persona-based system prompts for natural multi-turn conversations.

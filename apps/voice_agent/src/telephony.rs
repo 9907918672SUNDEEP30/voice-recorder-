@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -13,12 +14,23 @@ use tokio::sync::mpsc;
 use crate::pipeline::PipelineOrchestrator;
 use crate::codec::G711Codec;
 
-struct AppState {
-    // In a real app, this would be a map of active sessions
+use ai_core::models::adapters::{VADAdapter, SttAdapter, LlmAdapter, TtsAdapter};
+
+#[derive(Clone)]
+pub struct AppState {
+    vad: Arc<Mutex<dyn VADAdapter>>,
+    stt: Arc<dyn SttAdapter>,
+    llm: Arc<dyn LlmAdapter>,
+    tts: Arc<dyn TtsAdapter>,
 }
 
-pub async fn start_telephony_server() -> anyhow::Result<()> {
-    let state = Arc::new(AppState {});
+pub async fn start_telephony_server(
+    vad: Arc<Mutex<dyn VADAdapter>>,
+    stt: Arc<dyn SttAdapter>,
+    llm: Arc<dyn LlmAdapter>,
+    tts: Arc<dyn TtsAdapter>,
+) -> anyhow::Result<()> {
+    let state = AppState { vad, stt, llm, tts };
 
     let app = Router::new()
         .route("/ws/telephony", get(ws_handler))
@@ -31,19 +43,30 @@ pub async fn start_telephony_server() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn ws_handler(ws: WebSocketUpgrade, State(_state): State<Arc<AppState>>) -> Response {
-    ws.on_upgrade(handle_socket)
+async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
+    ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(socket: WebSocket) {
+async fn handle_socket(socket: WebSocket, state: AppState) {
     println!("New telephony connection established.");
     let (mut sender, mut receiver) = socket.split();
 
     // Channels for orchestrator communication
     let (telephony_tx, mut telephony_rx) = mpsc::channel::<String>(100);
-    let (inbound_audio_tx, mut _inbound_audio_rx) = mpsc::channel::<Vec<u8>>(100);
+    let (inbound_audio_tx, inbound_audio_rx) = mpsc::channel::<Vec<u8>>(100);
     
-    let _orchestrator = PipelineOrchestrator::new(telephony_tx, "session_1".to_string());
+    // Create the orchestrator with the shared models
+    let orchestrator = Arc::new(PipelineOrchestrator::new(
+        telephony_tx, 
+        "session_1".to_string(), // In real app, this comes from WS query params
+        state.vad.clone(),
+        state.stt.clone(),
+        state.llm.clone(),
+        state.tts.clone(),
+    ));
+
+    // Start the orchestrator's listening loop
+    orchestrator.start_pipeline(inbound_audio_rx);
 
     // Task 1: Handle incoming WebSocket messages (from Telephony provider)
     let mut recv_task = tokio::spawn(async move {
