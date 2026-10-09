@@ -3066,6 +3066,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "bytes",
  "futures",
  "ndarray 0.15.6",

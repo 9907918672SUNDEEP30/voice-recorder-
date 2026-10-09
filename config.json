@@ -19,7 +19,7 @@
       "embedding_dimension": 384
     },
     "whisper_encoder": {
-      "path": "whisper_tiny_onnx/encoder_model.onnx",
+      "path": "whisper_tiny_onnx/encoder_model_q4.onnx",
       "input_names": ["input_features"],
       "output_names": ["last_hidden_state"],
       "feature_dimensions": [1, 80, 3000]

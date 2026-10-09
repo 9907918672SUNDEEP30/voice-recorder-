@@ -28,7 +28,7 @@ impl AudioResampler {
 
     /// DSP Math: Resample PCM f32 from one frequency to another
     pub fn resample(&mut self, input_audio: &[f32]) -> Result<Vec<f32>> {
-        let mut input_buffers = vec![input_audio.to_vec()];
+        let input_buffers = vec![input_audio.to_vec()];
         let output_buffers = self.resampler.process(&input_buffers, None)
             .map_err(|e| anyhow::anyhow!("DSP Error: {:?}", e))?;
             

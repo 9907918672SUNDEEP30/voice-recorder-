@@ -218,7 +218,7 @@ impl PipelineOrchestrator {
         self.set_state(SessionState::Speaking);
         
         let mut current_sentence = String::new();
-        let (audio_tx, mut audio_rx) = mpsc::channel(100);
+        let (audio_tx, mut audio_rx) = mpsc::channel::<Bytes>(100);
         
         // 5. Output via WebSocket (Streaming back to user instantly as audio chunks arrive)
         let stream_sid_clone = self.stream_sid.clone();

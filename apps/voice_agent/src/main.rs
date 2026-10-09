@@ -25,8 +25,8 @@ async fn main() -> Result<()> {
     let silero_path = format!("{}\\{}", base_dir, config["models"]["silero_vad"]["path"].as_str().unwrap_or("silero_vad.onnx"));
     
     // Using mock paths if config missing just so it doesn't crash
-    let whisper_enc = format!("{}\\{}", base_dir, "whisper_tiny_onnx\\encoder_model.onnx");
-    let whisper_dec = format!("{}\\{}", base_dir, "whisper_tiny_onnx\\decoder_model.onnx");
+    let whisper_enc = format!("{}\\{}", base_dir, "whisper_tiny_onnx\\encoder_model_q4.onnx");
+    let whisper_dec = format!("{}\\{}", base_dir, "whisper_tiny_onnx\\decoder_model_q4.onnx");
     let whisper_tok = format!("{}\\{}", base_dir, "whisper_tiny_onnx\\tokenizer.json");
     
     let qwen_llm = format!("{}\\{}", base_dir, "qwen2-vl-2b\\llmmodel.onnx");
@@ -53,16 +53,15 @@ async fn main() -> Result<()> {
     // 1. Initialize Adapters
     let vad_adapter = Arc::new(Mutex::new(SileroVadLocal::new(&silero_path)?)) as Arc<Mutex<dyn VADAdapter>>;
     
-    // Some models may fail to load if files are missing on disk during dev, ignoring unwrap crashes with dummy error for now
-    let stt_adapter = Arc::new(WhisperTinyLocal::new(&whisper_enc, &whisper_dec, &whisper_tok)
-        .unwrap_or_else(|_| WhisperTinyLocal::new("", "", "").unwrap())) as Arc<dyn SttAdapter>;
-        
-    let llm_adapter = Arc::new(QwenLocal::new(&qwen_llm, &qwen_vis, &qwen_vis_enc, &qwen_tok)
-        .unwrap_or_else(|_| QwenLocal::new("", "", "", "").unwrap())) as Arc<dyn LlmAdapter>;
-        
-    let reference_audio_path = "assets\\sweet_girl_reference.wav";
-    let tts_adapter = Arc::new(OpenVoiceLocal::new(&piper_path, &openvoice_color_path, &openvoice_extract_path, reference_audio_path)
-        .unwrap_or_else(|_| OpenVoiceLocal::new("", "", "", "").unwrap())) as Arc<dyn TtsAdapter>;
+    let stt_adapter = Arc::new(WhisperTinyLocal::new(&whisper_enc, &whisper_dec, &whisper_tok)?) as Arc<dyn SttAdapter>;
+    println!("✅ Whisper STT Loaded successfully.");
+
+    let llm_adapter = Arc::new(QwenLocal::new(&qwen_llm, &qwen_vis, &qwen_vis_enc, &qwen_tok)?) as Arc<dyn LlmAdapter>;
+    println!("✅ Qwen Multimodal LLM Loaded successfully.");
+
+    let reference_audio_path = "sweet_girl_reference.wav";
+    let tts_adapter = Arc::new(OpenVoiceLocal::new(&piper_path, &openvoice_color_path, &openvoice_extract_path, reference_audio_path)?) as Arc<dyn TtsAdapter>;
+    println!("✅ Piper + OpenVoice TTS Loaded successfully.");
 
     // 2. Start Server
     telephony::start_telephony_server(vad_adapter, stt_adapter, llm_adapter, tts_adapter).await?;

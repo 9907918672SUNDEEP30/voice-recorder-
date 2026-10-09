@@ -1,115 +1,155 @@
-# 🎙️ Voice AI Calling Agent - Beginner's Complete Guide
+# 🎙️ Voice AI Calling Agent - Beginner & Production Guide (`apps/voice_agent`)
 
-यह दस्तावेज़ (Guide) आपके **Voice AI Calling Agent** का पूरा मैनुअल है। अगर आपकी चैट डिलीट भी हो जाए, तो आप इस फाइल को पढ़कर अपना पूरा प्रोजेक्ट समझ सकते हैं और चला सकते हैं। इसे आपके **"Zero-Bloat"** और **100% Local ONNX** पॉलिसी के तहत बनाया गया है।
+यह दस्तावेज़ आपके **Voice AI Calling Agent** का संपूर्ण ऑपरेशनल और टेक्निकल मैनुअल है। यह 100% लोकल ONNX मॉडल्स पर बिना किसी बाहरी क्लाउड API या पायथन पर निर्भर हुए चलता है।
 
 ---
 
-## 🏗️ 1. प्रोजेक्ट का स्ट्रक्चर (Workspace Architecture)
-आपका कोड एक **Rust Workspace (Monorepo)** में रखा गया है। इसका मतलब है कि आपका कोर फ्रेमवर्क अलग है और यह ऐप अलग है:
+## 🏗️ 1. प्रोजेक्ट संरचना (Workspace Monorepo Structure)
+
+आपका कोड एक **Rust Workspace** में व्यवस्थित है:
 
 ```text
-ai_core_framework/               <-- (मुख्य फोल्डर / Workspace Root)
+ai_core_framework/                     <-- Workspace Root
 │
-├── core_lib/                    <-- (यहाँ आपका 90% काम, Neutral Framework है)
+├── .cargo/
+│   └── config.toml                    <-- MSVC Dynamic CRT (/MD) सेटिंग्स
+│
+├── crates/
+│   └── core/                          <-- ai_core: Universal AI & ONNX Engine
+│       ├── Cargo.toml
+│       ├── ARCHITECTURE.md            <-- कोर आर्किटेक्चर दस्तावेज़
+│       ├── README.md                  <-- कोर गाइड
+│       ├── WORK_PROGRESS.md           <-- कोर स्टेटस ट्रैकर
+│       └── src/
+│           ├── lib.rs
+│           ├── engine/                <-- स्टेट मशीन और स्टेप इंजन
+│           └── models/
+│               ├── adapters.rs        <-- VADAdapter, SttAdapter, LlmAdapter, TtsAdapter
+│               ├── onnx_adapters.rs   <-- Silero, Whisper, Qwen, OpenVoice रियल ONNX
+│               ├── dsp.rs             <-- Rubato Sinc-Interpolation रीसैंपलिंग
+│               └── phonemizer.rs      <-- नेटिव हिंदी फोनेमाइज़र
 │
 └── apps/
-    └── voice_agent/             <-- (आपका Voice AI ऐप)
-        ├── Cargo.toml           (इस ऐप की सेटिंग्स और डिपेंडेंसी)
-        ├── test_client.html     (ब्राउज़र से टेस्ट करने के लिए फाइल)
-        ├── README.md            (यह गाइड जो आप पढ़ रहे हैं)
+    └── voice_agent/                   <-- voice_agent: Telephony Calling Bot
+        ├── Cargo.toml
+        ├── ARCHITECTURE.md            <-- वॉइस एजेंट आर्किटेक्चर
+        ├── README.md                  <-- यह गाइड
+        ├── WORK_PROGRESS.md           <-- वॉइस एजेंट स्टेटस ट्रैकर
+        ├── test_client.html           <-- वेब ब्राउज़र से लाइव टेस्टिंग क्लाइंट
         └── src/
-            ├── main.rs          (ऐप स्टार्ट करने की फाइल, config.json को पढ़ती है)
-            ├── pipeline.rs      (दिमाग: State Machine और Barge-in)
-            ├── telephony.rs     (WebSocket सर्वर: Port 3000)
-            ├── onnx_adapters.rs (Silero, Whisper, Qwen, OpenVoice मॉडल्स)
-            ├── codec.rs         (8kHz से 16kHz ऑडियो कनवर्टर)
-            └── prompts.rs       (सिस्टम प्रॉम्प्ट और मेमोरी यहाँ सेव है)
+            ├── main.rs                <-- ऐप एंट्री पॉइंट, मॉडल्स इनिशियलाइज़ेशन
+            ├── telephony.rs           <-- Axum WebSocket सर्वर (Port 3000)
+            ├── pipeline.rs            <-- फुल-डुप्लेक्स आर्केस्ट्रेटर, स्टेट मशीन, बार्ज-इन
+            ├── codec.rs               <-- G.711 mu-law <-> 16kHz PCM कोडेक
+            └── prompts.rs             <-- सिस्टम प्रॉम्प्ट और व्यक्तित्व (Persona)
 ```
 
-> **नोट:** आपके सभी AI मॉडल्स (ONNX) के पाथ मुख्य वर्कस्पेस के `config.json` से अपने-आप लोड होते हैं। आपको कोड में पाथ हार्डकोड करने की ज़रूरत नहीं है।
+---
+
+## ⚙️ 2. यह काम कैसे करता है? (Data & Streaming Workflow)
+
+यह एप्लिकेशन **300ms से कम लेटेंसी** में कॉलर की बात का जवाब देता है:
+
+1. **Audio Ingestion (कॉल इनपुट):**
+   - Telephony (Twilio, Exotel) या वेब ब्राउज़र से 8kHz G.711 $\mu$-law ऑडियो आता है।
+2. **Codec Resampling:**
+   - `codec.rs` उस ऑडियो को 16kHz 16-bit लीनियर PCM में परिवर्तित करता है।
+3. **VAD Listening Check (`SileroVadLocal`):**
+   - 512-सैंपल (32ms) चंक्स पर वास्तविक ONNX इनफेरेंस चलता है। जब तक यूज़र बोलता है, ऑडियो बफर होता है। ~1 सेकंड की खामोशी पर यूज़र का टर्न पूरा माना जाता है।
+4. **STT Understanding (`WhisperTinyLocal`):**
+   - बफर किए गए ऑडियो का 80-बिन Log-Mel स्पेक्ट्रोग्राम बनता है, ONNX एन्कोडर और डिकोडर लूप से वास्तविक टेक्स्ट में ट्रांसक्रिप्शन होता है।
+5. **AMD (Voicemail & IVR Cut-off):**
+   - यदि ट्रांसक्रिप्ट में "leave a message", "voicemail", या "beep" जैसे शब्द मिलते हैं, तो कॉल तुरंत हैंगअप हो जाती है।
+6. **Reasoning & Multi-Turn Brain (`QwenLocal`):**
+   - ChatML फॉर्मेट में सिस्टम प्रॉम्प्ट और कन्वर्सेशन हिस्ट्री के साथ Qwen2 LLM में इनपुट जाता है। LLM टोकन्स को स्ट्रीम करता है।
+7. **Sentence-by-Sentence TTS Streaming (`OpenVoiceLocal`):**
+   - जैसे ही कोई वाक्य समाप्त होता है (`.`, `?`, `!`, `।`), वह वाक्य तुरंत Piper TTS को दिया जाता है।
+   - जनरेटेड ऑडियो को 1024-बाइट PCM चंक्स में स्ट्रीम किया जाता है और $\mu$-law में बदलकर कॉलर को तुरंत सुनाई देता है।
+8. **Instant Barge-In (यूज़र इंटरप्शन):**
+   - यदि बॉट के बोलते समय यूज़र बोलना शुरू करता है, तो VAD तुरंत पहचानता है, एक्टिव टॉस्क कैंसिल हो जाता है, कैरियर को `"clear"` सिग्नल जाता है, और बॉट तुरंत चुप होकर यूज़र को सुनने लगता है।
 
 ---
 
-## ⚙️ 2. यह काम कैसे करता है? (Data & Workflow)
-यह ऐप **400ms (मिलीसेकंड)** से कम समय में यूज़र की बात का जवाब देता है। यह कैसे होता है?
-1. **Telephony (Exotel/Twilio) या Browser** से आवाज़ आती है।
-2. **Codec** उस आवाज़ को `16,000 Hz` (16kHz) में बदलता है।
-3. **VAD (Silero)** सुनता है कि यूज़र बोल रहा है या चुप हो गया है। अगर यूज़र बीच में बोलता है (Barge-in), तो VAD तुरंत `cancel()` सिग्नल भेजकर एजेंट को चुप करा देता है।
-4. **STT (Whisper-tiny)** आवाज़ को टेक्स्ट में बदलता है।
-5. **RAG (Dynamic Memory)** अगर यूज़र कोई कंपनी से जुड़ा सवाल पूछता है (जैसे प्रीमियम प्लान), तो सिस्टम PDF डेटाबेस में **Embedding (MiniLM)** और **Vector Search** करके सिर्फ ज़रूरी पैराग्राफ निकालता है। फिर **Reranker (BGE)** उसे चेक करके Qwen को भेजता है। (इसमें सिर्फ 30-50ms लगते हैं)।
-6. **LLM (Qwen)** टेक्स्ट और RAG डेटा को समझकर जवाब सोचता है। जैसे ही Qwen 3-4 शब्द सोच लेता है, वह तुरंत उन शब्दों को आगे भेज देता है (Progressive Chunking)।
-7. **TTS (OpenVoice)** उन 3-4 शब्दों को तुरंत आवाज़ में बदलता है और वापस फ़ोन/ब्राउज़र पर भेज देता है।
+## 📂 3. आवश्यक लोकल मॉडल्स (`C:\AI_Models`)
 
-*यह सब कुछ आपके कंप्यूटर/सर्वर पर 100% लोकल (ONNX) चलता है, बिना किसी इंटरनेट API के!*
+सभी मॉडल्स आपके कंप्यूटर के `C:\AI_Models` फोल्डर में मौजूद होने चाहिए:
+
+- **VAD:** `C:\AI_Models\silero_vad.onnx`
+- **STT Encoder:** `C:\AI_Models\whisper_tiny_onnx\encoder_model_q4.onnx`
+- **STT Decoder:** `C:\AI_Models\whisper_tiny_onnx\decoder_model_q4.onnx`
+- **STT Tokenizer:** `C:\AI_Models\whisper_tiny_onnx\tokenizer.json`
+- **LLM Brain:** `C:\AI_Models\qwen2-vl-2b\llmmodel.onnx`
+- **LLM Tokenizer:** `C:\AI_Models\qwen2-vl-2b\tokenizer.json`
+- **TTS Base:** `C:\AI_Models\piper_hi\hi_IN-priyamvada-medium-int8.onnx`
+- **Tone Color:** `C:\AI_Models\OpenVoice-ONNX-v2\tone_color.onnx`
+- **Tone Extract:** `C:\AI_Models\OpenVoice-ONNX-v2\tone_extract.onnx`
 
 ---
 
-## 🚀 3. ऐप को कैसे चलाएं? (How to Run)
+## 🚀 4. ऐप को कैसे चलाएं? (How to Run)
 
-इस ऐप को चलाने के लिए आपको अपने टर्मिनल (Command Prompt / VS Code Terminal) में यह कमांड चलाना है:
+टर्मिनल (PowerShell या Command Prompt) में वर्कस्पेस रूट से चलाएं:
 
-**कमांड:**
 ```bash
-cargo run --bin voice_agent
+cargo run -p voice_agent
 ```
 
-**सफल होने पर आपको यह दिखेगा:**
+### सफल आउटपुट:
 ```text
 Voice AI Core Starting...
 Loading 100% Local ONNX Stack...
+Initializing Silero VAD (Listening Core)...
+ - VAD Model: C:\AI_Models\silero_vad.onnx
+Initializing OpenVoice (Neutral Core)...
+ - Base TTS (Piper): C:\AI_Models\piper_hi\hi_IN-priyamvada-medium-int8.onnx
+Initializing Qwen Multimodal LLM (Brain + Vision + OCR Core)...
+ - LLM Brain Model: C:\AI_Models\qwen2-vl-2b\llmmodel.onnx
+Initializing Whisper STT (Understanding Core)...
 ONNX Runtime Initialized.
 Telephony WebSocket server listening on ws://0.0.0.0:3000/ws/telephony
 ```
-*(इसका मतलब है कि आपका सर्वर चालू हो गया है और कॉल्स का इंतज़ार कर रहा है।)*
 
 ---
 
-## 🎤 4. बिना फ़ोन नंबर के कैसे टेस्ट करें? (Browser Testing)
+## 🎤 5. ब्राउज़र से लाइव टेस्टिंग (Browser Testing via `test_client.html`)
 
-अगर आपके पास अभी Exotel या Twilio का नंबर नहीं है, तो भी आप इसे अपने वेब ब्राउज़र में टेस्ट कर सकते हैं।
+बिना टेलीफोनी प्रोवाइडर (Twilio/Exotel) के भी आप अपने कंप्यूटर के माइक्रोफोन से सीधे टेस्ट कर सकते हैं:
 
-**स्टेप 1:** टर्मिनल में अपना सर्वर चालू करें (`cargo run --bin voice_agent`)।
-**स्टेप 2:** अपने फोल्डर `d:\ai_core_framework\apps\voice_agent\` में जाएँ।
-**स्टेप 3:** वहाँ मौजूद **`test_client.html`** नाम की फाइल पर डबल-क्लिक करें। यह Chrome या Edge ब्राउज़र में खुलेगी।
-**स्टेप 4:** ब्राउज़र में हरे रंग के **"Start Call"** बटन पर क्लिक करें। 
-**स्टेप 5:** ब्राउज़र आपसे माइक्रोफ़ोन की परमिशन मांगेगा। "Allow" करें।
-**स्टेप 6:** अब आप अपने कंप्यूटर के माइक में बोल सकते हैं। आपकी आवाज़ सीधे Rust सर्वर पर जाएगी और एजेंट का जवाब आपके कंप्यूटर के स्पीकर से आएगा!
-
-*(ध्यान दें: ब्राउज़र खुद-ब-खुद आपकी आवाज़ को 16kHz में कन्वर्ट करके रस्ट को भेजता है, इसलिए यहाँ हर्ट्ज़ (Hz) की कोई समस्या नहीं होगी।)*
-
----
-
-## 🧠 5. एजेंट की मेमोरी और पहचान (System Prompt)
-एजेंट को उसकी पहचान देने के लिए हमने एक अलग फाइल बनाई है: **`src/prompts.rs`**।
-
-इस फाइल में Qwen मॉडल के लिए **ChatML** फॉर्मेट में सिस्टम प्रॉम्प्ट लिखा गया है।
-जैसे: 
-> *"तुम 'शांभवी एआई लैब' की एक प्रोफेशनल सेल्सपर्सन हो। तुम्हारा काम divyamilan.in का प्रचार करना है..."*
-
-चूँकि यह प्रॉम्प्ट Qwen के पास रनटाइम पर जाता है, इसलिए आप भविष्य में इसी Qwen मॉडल को YouTube Automation या Data Analyst के लिए भी इस्तेमाल कर सकते हैं, बस उनका प्रॉम्प्ट अलग होगा।
+1. टर्मिनल में सर्वर चालू रखें (`cargo run -p voice_agent`)।
+2. `d:\ai_core_framework\apps\voice_agent\test_client.html` फाइल को Chrome या Edge ब्राउज़र में खोलें।
+3. **"Start Call"** बटन पर क्लिक करें।
+4. माइक्रोफ़ोन की अनुमति (Permission) दें।
+5. माइक में बोलें: *"नमस्ते, क्या आप मेरी मदद कर सकती हैं?"*
+6. बॉट का जवाब आपके कंप्यूटर स्पीकर से तुरंत सुनाई देगा।
+7. बोलते समय बीच में टोक कर देखें (Barge-In) — बॉट तुरंत बोलना बंद करके आपकी नई बात सुनेगा।
 
 ---
 
-## 📚 6. RAG (कंपनी की बड़ी PDF फाइलें कैसे काम करेंगी?)
-अगर आपके पास कंपनी की 50-पेज की डॉक्युमेंटेशन (PDF) है, तो उसे सिस्टम प्रॉम्प्ट में नहीं रखा जा सकता (इससे मॉडल उलझ जाएगा)। 
-इसके लिए हम **RAG (Retrieval-Augmented Generation)** का इस्तेमाल करते हैं:
-1. पीडीएफ के सारे पेज छोटे-छोटे हिस्सों में बँटे होते हैं।
-2. जैसे ही यूज़र सवाल पूछता है, हमारा सिस्टम **Embedding (BGE-m3)** और **Reranker** के ज़रिए पलक झपकते ही (सिर्फ 50ms में) सही लाइन खोज कर लाता है।
-3. फिर वह लाइन Qwen मॉडल को दे दी जाती है, जिससे वह एकदम सटीक जवाब देता है।
+## 📞 6. टेलीफोनी प्रोवाइडर (Twilio / Exotel) सेटअप
+
+### Twilio TwiML Stream Configuration:
+Twilio इनबाउंड कॉल पर निम्नलिखित TwiML रिटर्न करें:
+```xml
+<Response>
+    <Connect>
+        <Stream url="wss://your-domain.ngrok-free.app/ws/telephony" />
+    </Connect>
+</Response>
+```
+
+### Exotel Audio Streaming:
+Exotel Applet में WebSocket URL सेट करें:
+```text
+wss://your-domain.ngrok-free.app/ws/telephony
+```
 
 ---
 
-## 🗣️ 7. ज़ीरो-शॉट वॉयस क्लोनिंग (Zero-Shot Voice Cloning)
-इस प्रोजेक्ट में **OpenVoice v2 (ONNX)** का इस्तेमाल किया गया है। यह आपको बिना किसी ट्रेनिंग के किसी भी आवाज़ को क्लोन करने की सुविधा देता है:
-- **Neutral Factory:** कोर फ्रेमवर्क पूरी तरह से निष्पक्ष है। 
-- **App-Level Voice:** हर ऐप अपनी 3-सेकंड की `.wav` रेफरेंस फाइल खुद देता है (जैसे `assets/sweet_girl_reference.wav`)।
-- **Blazing Fast:** जब ऐप स्टार्ट होता है, तो यह उस 3-सेकंड की ऑडियो का टोन निकाल कर RAM (Thread-safe RwLock) में सेव कर लेता है। कॉलिंग के दौरान यह फाइल को दोबारा नहीं पढ़ता, जिससे लेटेंसी 30ms-50ms रहती है।
-- **Dynamic Updates (भविष्य के लिए तैयार):** कोर इंजन में `update_voice` फंक्शन मौजूद है। आप चाहें तो डैशबोर्ड से लाइव चलते हुए सर्वर में भी नई आवाज़ सेट कर सकते हैं, वह भी बिना सर्वर क्रैश किए!
+## 🔧 7. समस्या निवारण (Troubleshooting)
 
----
-
-**शुभकामनाएं! आपका Voice AI प्रोजेक्ट अब पूरी तरह से आपके नियंत्रण में है।**
-
-## Update: Advanced Streaming & Memory
-- **Streaming STT & TTS:** Implemented sentence-by-sentence TTS and sliding window STT for ultra-low latency.
-- **Contextual Memory:** Added conversation history tracking and persona-based system prompts for natural multi-turn conversations.
+1. **Port 3000 already in use:**
+   - यदि पोर्ट 3000 पहले से व्यस्त है, तो `Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess | Stop-Process` चलाएं।
+2. **Missing Model File:**
+   - सुनिश्चित करें कि सभी 8+ मॉडल्स फ़ाइलें `C:\AI_Models` में सही नाम से मौजूद हैं।
+3. **MSVC Linker Errors (`LNK2038`):**
+   - `.cargo/config.toml` में `target-feature=-crt-static` और `CFLAGS=/MD` सेट है। हमेशा साफ बिल्ड के लिए `cargo check -p voice_agent` चलाएं।
