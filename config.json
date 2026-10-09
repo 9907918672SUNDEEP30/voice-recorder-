@@ -35,11 +35,16 @@
       "input_names": ["input_ids", "attention_mask"],
       "output_names": ["logits"]
     },
-    "kokoro_tts": {
-      "path": "kokoro_tts_onnx/model.onnx",
-      "input_names": ["tokens", "style", "speed"],
-      "output_names": ["audio"],
-      "sample_rate": 24000
+    "piper_tts": {
+      "path": "piper_hi/hi_IN-priyamvada-medium-int8.onnx",
+      "path_config": "piper_hi/hi/hi_IN/priyamvada/medium/hi_IN-priyamvada-medium.onnx.json",
+      "sample_rate": 22050
+    },
+    "openvoice_tts": {
+      "path_tone_color": "OpenVoice-ONNX-v2/tone_color.onnx",
+      "path_tone_extract": "OpenVoice-ONNX-v2/tone_extract.onnx",
+      "path_config": "OpenVoice-ONNX-v2/tone_config.json",
+      "sample_rate": 22050
     }
   }
 }

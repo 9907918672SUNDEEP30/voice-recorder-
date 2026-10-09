@@ -6,6 +6,7 @@
 pub mod engine;
 pub mod ipc;
 pub mod telemetry;
+pub mod models;
 
 // Convenience re-exports
 pub use engine::{

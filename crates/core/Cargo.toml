@@ -7,4 +7,17 @@ description = "High-performance, zero-bloat, application-agnostic AI Agent Runti
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-# Zero third-party dependencies: strictly Rust standard library
+# Dependencies for neutral AI Core Frameork models
+ort = { version = "2.0.0-rc.6", features = ["ndarray"] }
+ndarray = "0.15"
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+bytes = "1.6.0"
+anyhow = "1.0"
+async-trait = "0.1.80"
+
+# Real SaaS Logic Libraries
+tokenizers = "0.15"       # Real BPE Tokenization for LLM
+rubato = "0.14"           # Real DSP Audio Resampling (16kHz <-> 8kHz)
+regex = "1.10"            # Text parsing
+

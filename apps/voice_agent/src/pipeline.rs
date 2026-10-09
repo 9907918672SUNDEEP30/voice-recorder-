@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use bytes::Bytes;
 
-use crate::adapters::{SessionState, PipelineEvent};
+use ai_core::models::adapters::{SessionState, PipelineEvent};
 
 pub struct PipelineOrchestrator {
     state: Arc<AtomicUsize>, // 0: Idle, 1: Listening, 2: Thinking, 3: Speaking
