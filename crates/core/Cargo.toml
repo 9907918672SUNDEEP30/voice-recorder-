@@ -20,4 +20,5 @@ async-trait = "0.1.80"
 tokenizers = "0.15"       # Real BPE Tokenization for LLM
 rubato = "0.14"           # Real DSP Audio Resampling (16kHz <-> 8kHz)
 regex = "1.10"            # Text parsing
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
 
