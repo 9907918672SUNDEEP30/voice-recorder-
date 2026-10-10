@@ -1,94 +1,664 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice AI Calling Agent - Browser Test</title>
+    <title>Voice AI Calling Agent - Telephony Simulator (Shambhavi AI Lab)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #1e1e1e; color: white; }
-        button { padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; margin: 10px; }
-        #startBtn { background-color: #4CAF50; color: white; }
-        #stopBtn { background-color: #f44336; color: white; }
-        #status { margin-top: 20px; font-size: 16px; color: #aaa; }
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #181b24;
+            --card-bg: rgba(26, 31, 44, 0.85);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .badge-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .badge.green { border-color: rgba(16, 185, 129, 0.4); color: #34d399; }
+        .badge.purple { border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; }
+        .badge.blue { border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .call-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .call-config { grid-template-columns: 1fr; }
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .input-group input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin: 10px 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #64748b;
+        }
+
+        .dot.active-listening { background-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+        .dot.active-thinking { background-color: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); }
+        .dot.active-speaking { background-color: var(--accent-purple); box-shadow: 0 0 10px var(--accent-purple); }
+
+        #visualizerCanvas {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            margin-top: 14px;
+        }
+
+        .transcript-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .msg-bubble {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.45;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-caller {
+            align-self: flex-start;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #bfdbfe;
+        }
+
+        .msg-agent {
+            align-self: flex-end;
+            background: rgba(139, 92, 246, 0.18);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            color: #ddd6fe;
+        }
+
+        .msg-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .log-box {
+            background: #090a0f;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #94a3b8;
+            max-height: 120px;
+            overflow-y: auto;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .log-entry.barge-in { color: #f59e0b; font-weight: 600; }
+        .log-entry.turn { color: #34d399; }
+        .log-entry.error { color: #ef4444; }
     </style>
 </head>
 <body>
 
-    <h2>🎤 Voice AI Agent - Browser Test (Shambhavi AI Lab)</h2>
-    <button id="startBtn">Start Call (Connect to Rust)</button>
-    <button id="stopBtn" disabled>End Call</button>
-    <p id="status">Status: Disconnected</p>
+    <div class="container">
+        <header>
+            <h1>🎙️ Shambhavi AI Lab - Voice AI Telephony Agent</h1>
+            <p>100% Local ONNX Production Core | Sub-300ms Full-Duplex Engine</p>
+            <div class="badge-row">
+                <span class="badge green">🟢 G.711 μ-law (8kHz)</span>
+                <span class="badge purple">⚡ Instant Barge-In</span>
+                <span class="badge blue">☁️ Twilio Protocol Compatible</span>
+            </div>
+        </header>
+
+        <!-- Call Configuration Card -->
+        <div class="card">
+            <div class="call-config">
+                <div class="input-group">
+                    <label>कॉलर का नाम (Caller Name):</label>
+                    <input type="text" id="callerName" value="संदीप जी" placeholder="उदा: संदीप जी">
+                </div>
+                <div class="input-group">
+                    <label>वर्चुअल टेलीफ़ोन नंबर (Phone Number):</label>
+                    <input type="text" id="callerPhone" value="+91 98765 43210" placeholder="+91 98765 43210">
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button id="startBtn" class="btn btn-start">📞 Start Call (ब्राउज़र से कॉल जोड़ें)</button>
+                <button id="stopBtn" class="btn btn-stop" disabled>🛑 End Call (कॉल समाप्त करें)</button>
+            </div>
+
+            <div style="margin-top: 12px;">
+                <div id="statusPill" class="status-pill">
+                    <span id="statusDot" class="dot"></span>
+                    <span id="statusText">कॉल डिस्कनेक्टेड (Disconnected)</span>
+                </div>
+            </div>
+
+            <!-- Waveform Canvas -->
+            <canvas id="visualizerCanvas"></canvas>
+        </div>
+
+        <!-- Live Conversation Feed -->
+        <div class="card">
+            <h3 style="font-size: 16px; margin-bottom: 12px; text-align: left; color: #cbd5e1;">💬 लाइव बातचीत ट्रांसक्रिप्ट (Live Conversation Feed):</h3>
+            <div id="transcriptBox" class="transcript-container">
+                <div style="color: #64748b; font-size: 13px; text-align: center; padding: 20px;">कॉल शुरू करने के बाद यहाँ बातचीत दिखाई देगी...</div>
+            </div>
+        </div>
+
+        <!-- Live Telephony Debug Console -->
+        <div class="card">
+            <h3 style="font-size: 14px; margin-bottom: 8px; text-align: left; color: #94a3b8;">⚙️ टेलीफ़ोनी इवेंट कंसोल (Twilio Media Streams Frame Log):</h3>
+            <div id="logBox" class="log-box"></div>
+        </div>
+    </div>
 
     <script>
-        let ws;
-        let audioContext;
-        let mediaStream;
-        let processor;
+        // --- 100% ITU-T G.711 μ-law JavaScript Codec (Zero Mocks) ---
+        const ULAW_DECODE_TABLE = new Int16Array(256);
+        for (let i = 0; i < 256; i++) {
+            let byte = ~i & 0xFF;
+            let sign = (byte & 0x80) !== 0;
+            let exponent = (byte >> 4) & 0x07;
+            let mantissa = byte & 0x0F;
+            let sample = (((mantissa << 3) + 0x84) << exponent) - 0x84;
+            ULAW_DECODE_TABLE[i] = sign ? -sample : sample;
+        }
+
+        function linearToUlaw(sample) {
+            const BIAS = 0x84;
+            const CLIP = 32635;
+            let sign = 0;
+            if (sample < 0) {
+                sample = -sample;
+                sign = 0x80;
+            }
+            if (sample > CLIP) sample = CLIP;
+            sample += BIAS;
+
+            let exponent = 7;
+            const masks = [0x4000, 0x2000, 0x1000, 0x0800, 0x0400, 0x0200, 0x0100, 0x0080];
+            for (let i = 0; i < masks.length; i++) {
+                if ((sample & masks[i]) !== 0) {
+                    exponent = 7 - i;
+                    break;
+                }
+            }
+            let mantissa = (sample >> (exponent + 3)) & 0x0F;
+            return ~(sign | (exponent << 4) | mantissa) & 0xFF;
+        }
+
+        // --- Telephony Session State ---
+        let ws = null;
+        let audioCtx = null;
+        let micStream = null;
+        let scriptProcessor = null;
+        let analyser = null;
+        let scheduledAudioNodes = [];
+        let nextPlayTime = 0;
+        let streamSid = "browser_sim_" + Math.random().toString(36).substring(7);
 
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
-        const statusText = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const transcriptBox = document.getElementById('transcriptBox');
+        const logBox = document.getElementById('logBox');
+        const canvas = document.getElementById('visualizerCanvas');
+        const canvasCtx = canvas.getContext('2d');
 
-        startBtn.onclick = async () => {
-            statusText.innerText = "Status: Connecting to Rust WS...";
-            ws = new WebSocket('ws://localhost:3000/ws/telephony');
+        function appendLog(text, className = '') {
+            const el = document.createElement('div');
+            el.className = 'log-entry ' + className;
+            const time = new Date().toLocaleTimeString();
+            el.innerText = `[${time}] ${text}`;
+            logBox.appendChild(el);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function addTranscript(role, text) {
+            if (transcriptBox.children.length === 1 && transcriptBox.children[0].innerText.includes('कॉल शुरू करने के बाद')) {
+                transcriptBox.innerHTML = '';
+            }
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble ' + (role === 'user' ? 'msg-caller' : 'msg-agent');
             
-            ws.onopen = async () => {
-                statusText.innerText = "Status: Connected! You can speak now.";
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            meta.innerText = role === 'user' ? '👤 कॉलर (आप)' : '🤖 दिव्या (divyamilan.in)';
+            
+            const content = document.createElement('div');
+            content.innerText = text;
+            
+            bubble.appendChild(meta);
+            bubble.appendChild(content);
+            transcriptBox.appendChild(bubble);
+            transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+
+        function clearPlaybackQueue() {
+            // Instant Barge-In flush!
+            for (const node of scheduledAudioNodes) {
+                try { node.stop(); } catch(e) {}
+            }
+            scheduledAudioNodes = [];
+            if (audioCtx) nextPlayTime = audioCtx.currentTime;
+            statusDot.className = 'dot active-listening';
+            statusText.innerText = '👂 लिसनिंग... (यूज़र बोल रहे हैं - Barge-In)';
+            appendLog('⚡ [Barge-In] Playback buffer flushed immediately by server.', 'barge-in');
+        }
+
+        // --- Visualizer ---
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            if (!analyser) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
+
+            canvasCtx.fillStyle = 'rgba(15, 17, 23, 0.4)';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = '#38bdf8';
+            canvasCtx.beginPath();
+
+            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+                if (i === 0) canvasCtx.moveTo(x, y);
+                else canvasCtx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            canvasCtx.lineTo(canvas.width, canvas.height / 2);
+            canvasCtx.stroke();
+        }
+
+        // --- WebSocket & Media Management ---
+        startBtn.onclick = async () => {
+            try {
                 startBtn.disabled = true;
-                stopBtn.disabled = false;
+                statusText.innerText = "कनेक्ट हो रहा है...";
+                appendLog("Connecting to WebSocket gateway ws://" + window.location.host + "/ws/telephony...");
 
-                // 1. Setup Audio Playback (From Rust to Browser)
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                
-                // 2. Setup Microphone Capture (From Browser to Rust)
-                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const source = audioContext.createMediaStreamSource(mediaStream);
-                
-                // Use ScriptProcessor for capturing raw PCM (deprecated but works well for simple tests)
-                processor = audioContext.createScriptProcessor(4096, 1, 1);
-                source.connect(processor);
-                processor.connect(audioContext.destination);
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsHost = window.location.host || 'localhost:3000';
+                ws = new WebSocket(`${wsProtocol}//${wsHost}/ws/telephony`);
 
-                processor.onaudioprocess = (e) => {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        const float32Array = e.inputBuffer.getChannelData(0);
-                        // Convert Float32 to Int16 for Rust
-                        const int16Array = new Int16Array(float32Array.length);
-                        for (let i = 0; i < float32Array.length; i++) {
-                            int16Array[i] = Math.max(-32768, Math.min(32767, float32Array[i] * 32768));
+                ws.onopen = async () => {
+                    statusText.innerText = "कॉल कनेक्टेड (Connected)! माइक एक्टिव है।";
+                    statusDot.className = "dot active-listening";
+                    stopBtn.disabled = false;
+                    appendLog("WebSocket connection opened. Initializing Twilio Media Stream session...");
+
+                    // 1. Send Twilio Start Frame
+                    const startFrame = {
+                        event: "start",
+                        streamSid: streamSid,
+                        start: {
+                            streamSid: streamSid,
+                            callSid: "CA_" + streamSid,
+                            customParameters: {
+                                name: document.getElementById('callerName').value,
+                                caller: document.getElementById('callerPhone').value
+                            }
                         }
-                        // Note: For real G.711 test, you'd encode to u-law here, 
-                        // but for browser testing, we can send PCM or handle it in Rust.
-                        ws.send(int16Array.buffer); 
+                    };
+                    ws.send(JSON.stringify(startFrame));
+                    appendLog(`Sent Twilio Start Frame: streamSid=${streamSid}`);
+
+                    // 2. Setup AudioContext (8kHz output capability)
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    nextPlayTime = audioCtx.currentTime;
+
+                    // 3. Setup Mic Stream
+                    micStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true } 
+                    });
+
+                    const source = audioCtx.createMediaStreamSource(micStream);
+                    analyser = audioCtx.createAnalyser();
+                    analyser.fftSize = 256;
+                    source.connect(analyser);
+
+                    // Setup ScriptProcessor for downsampling to 8kHz μ-law
+                    const bufferSize = 2048;
+                    scriptProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+                    analyser.connect(scriptProcessor);
+                    scriptProcessor.connect(audioCtx.destination);
+
+                    const inputSampleRate = audioCtx.sampleRate;
+                    const downsampleRatio = inputSampleRate / 8000;
+
+                    scriptProcessor.onaudioprocess = (e) => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            const inputData = e.inputBuffer.getChannelData(0);
+                            const outSamplesCount = Math.floor(inputData.length / downsampleRatio);
+                            const mulawBytes = new Uint8Array(outSamplesCount);
+
+                            for (let j = 0; j < outSamplesCount; j++) {
+                                const inIdx = Math.floor(j * downsampleRatio);
+                                const sampleFloat = inputData[inIdx];
+                                const sampleI16 = Math.max(-32768, Math.min(32767, Math.round(sampleFloat * 32767)));
+                                mulawBytes[j] = linearToUlaw(sampleI16);
+                            }
+
+                            // Convert to Base64 and send Twilio Media Frame
+                            let binaryStr = '';
+                            for (let k = 0; k < mulawBytes.length; k++) {
+                                binaryStr += String.fromCharCode(mulawBytes[k]);
+                            }
+                            const b64Payload = btoa(binaryStr);
+
+                            const mediaFrame = {
+                                event: "media",
+                                streamSid: streamSid,
+                                media: { payload: b64Payload }
+                            };
+                            ws.send(JSON.stringify(mediaFrame));
+                        }
+                    };
+
+                    drawVisualizer();
+                };
+
+                ws.onmessage = async (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.event === "media") {
+                            statusDot.className = "dot active-speaking";
+                            statusText.innerText = "🗣️ दिव्या बोल रही हैं (Divya Speaking)...";
+
+                            // Decode base64 μ-law payload
+                            const raw = atob(data.media.payload);
+                            const len = raw.length;
+                            const floatSamples = new Float32Array(len);
+
+                            for (let i = 0; i < len; i++) {
+                                const mulawByte = raw.charCodeAt(i);
+                                const sampleI16 = ULAW_DECODE_TABLE[mulawByte];
+                                floatSamples[i] = sampleI16 / 32768.0;
+                            }
+
+                            // Create 8kHz AudioBuffer for playback
+                            const audioBuf = audioCtx.createBuffer(1, len, 8000);
+                            audioBuf.getChannelData(0).set(floatSamples);
+
+                            const node = audioCtx.createBufferSource();
+                            node.buffer = audioBuf;
+                            node.connect(audioCtx.destination);
+
+                            const now = audioCtx.currentTime;
+                            const playTime = Math.max(now, nextPlayTime);
+                            node.start(playTime);
+                            nextPlayTime = playTime + audioBuf.duration;
+
+                            scheduledAudioNodes.push(node);
+                            node.onended = () => {
+                                scheduledAudioNodes = scheduledAudioNodes.filter(n => n !== node);
+                                if (scheduledAudioNodes.length === 0 && ws && ws.readyState === WebSocket.OPEN) {
+                                    statusDot.className = "dot active-listening";
+                                    statusText.innerText = "👂 लिसनिंग... आपकी बारी है (Listening).";
+                                }
+                            };
+                        } else if (data.event === "clear") {
+                            clearPlaybackQueue();
+                        } else if (data.event === "mark") {
+                            if (data.mark && data.mark.name === "hangup") {
+                                appendLog("🚨 Call hung up by agent (Voicemail/AMD marker).");
+                                stopCall();
+                            }
+                        }
+                    } catch (err) {
+                        appendLog("Error processing WebSocket frame: " + err, 'error');
                     }
                 };
-            };
 
-            ws.onmessage = async (event) => {
-                if (event.data instanceof Blob) {
-                    // Play incoming audio from Rust Agent
-                    const arrayBuffer = await event.data.arrayBuffer();
-                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                    const source = audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(audioContext.destination);
-                    source.start();
-                }
-            };
+                ws.onclose = () => {
+                    appendLog("WebSocket connection closed.");
+                    stopCall();
+                };
 
-            ws.onclose = () => {
-                statusText.innerText = "Status: Disconnected";
+                ws.onerror = (err) => {
+                    appendLog("WebSocket error: " + err, 'error');
+                    stopCall();
+                };
+
+            } catch (err) {
+                alert("माइक्रोफ़ोन एक्सेस एरर: " + err.message);
                 startBtn.disabled = false;
-                stopBtn.disabled = true;
-                if (processor) processor.disconnect();
-                if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-            };
+            }
         };
+
+        function stopCall() {
+            statusText.innerText = "कॉल डिस्कनेक्टेड (Disconnected)";
+            statusDot.className = "dot";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const stopFrame = { event: "stop", streamSid: streamSid };
+                ws.send(JSON.stringify(stopFrame));
+                ws.close();
+            }
+            ws = null;
+
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+                scriptProcessor = null;
+            }
+            if (micStream) {
+                micStream.getTracks().forEach(t => t.stop());
+                micStream = null;
+            }
+            clearPlaybackQueue();
+            appendLog("Telephony session concluded.");
+        }
 
         stopBtn.onclick = () => {
-            if (ws) ws.close();
+            stopCall();
         };
+
+        // Resize Canvas dynamically
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
     </script>
 </body>
 </html>
