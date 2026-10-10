@@ -152,6 +152,73 @@ impl PipelineOrchestrator {
         self.current_cancel_token.lock().await.clone()
     }
 
+    /// Speaks the initial telecaller greeting when the call is connected
+    pub fn trigger_initial_greeting(self: Arc<Self>) {
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(350)).await;
+            
+            let caller_name = self.caller_name.lock().await.clone();
+            let name_str = caller_name.unwrap_or_else(|| "संदीप जी".to_string());
+            let greeting = format!("नमस्ते {}! मैं दिव्या बोल रही हूँ 'दिव्या मिलन' से। क्या मेरी आवाज़ आप तक आ रही है?", name_str);
+            
+            println!("👋 [Pipeline] Delivering Initial Greeting: \"{}\"", greeting);
+            self.set_state(SessionState::Speaking);
+            let cancel_token = self.get_cancel_token().await;
+            
+            let (audio_tx, mut audio_rx) = mpsc::channel::<Bytes>(100);
+            let stream_sid_clone = self.get_stream_sid().await;
+            let telephony_ws_tx_clone = self.telephony_ws_tx.clone();
+            let cancel_token_net = cancel_token.clone();
+            
+            tokio::spawn(async move {
+                while let Some(audio_bytes) = audio_rx.recv().await {
+                    if cancel_token_net.is_cancelled() {
+                        break;
+                    }
+                    let mulaw_data = G711Codec::pcm_22k_to_mulaw_8k(&audio_bytes);
+                    if !mulaw_data.is_empty() {
+                        let payload = b64.encode(&mulaw_data);
+                        let media_frame = serde_json::json!({
+                            "event": "media",
+                            "streamSid": stream_sid_clone,
+                            "media": { "payload": payload }
+                        });
+                        let _ = telephony_ws_tx_clone.send(media_frame.to_string()).await;
+                    }
+                }
+            });
+            
+            let tts = self.tts.clone();
+            let _ = tts.synthesize_stream(&greeting, audio_tx, cancel_token.clone()).await;
+            
+            if !cancel_token.is_cancelled() {
+                // Send transcript frame to client
+                let transcript_frame = serde_json::json!({
+                    "event": "transcript",
+                    "role": "assistant",
+                    "text": greeting
+                });
+                let _ = self.telephony_ws_tx.send(transcript_frame.to_string()).await;
+                
+                // Record greeting in turns
+                {
+                    let mut turns = self.turn_records.lock().await;
+                    turns.push(TurnRecord {
+                        role: "assistant".to_string(),
+                        content: greeting.clone(),
+                        timestamp_ms: current_time_ms(),
+                    });
+                }
+                
+                let mut history_guard = self.history.lock().await;
+                history_guard.push(("assistant".to_string(), greeting));
+                
+                self.set_state(SessionState::Idle);
+                println!("👂 [Pipeline] Greeting completed. Ready for caller response.");
+            }
+        });
+    }
+
     /// Handles call termination by party or carrier; flushes session to Supabase
     pub async fn handle_call_ended(&self) {
         let end_time = current_time_ms();
@@ -235,7 +302,7 @@ impl PipelineOrchestrator {
                         
                         let self_clone = self.clone();
                         tokio::spawn(async move {
-                            self_clone.process_turn(audio_to_process).await;
+                            self_clone.process_turn_from_audio(audio_to_process).await;
                         });
                     }
                 }
@@ -243,12 +310,18 @@ impl PipelineOrchestrator {
         });
     }
 
-    /// Processes a completed utterance: STT -> AMD -> LLM -> Sequential TTS -> Network
-    async fn process_turn(&self, audio: Vec<u8>) {
-        let t_start = current_time_ms();
-        println!("🧠 [Pipeline] Speech completed. Running Whisper STT...");
+    /// Directly processes a text transcript from caller (for test bar or DTMF)
+    pub fn process_text_turn(self: Arc<Self>, transcript: String) {
+        let self_clone = self.clone();
+        tokio::spawn(async move {
+            self_clone.process_turn_with_transcript(transcript).await;
+        });
+    }
+
+    /// Processes audio utterance: Whisper STT -> Turn Logic
+    async fn process_turn_from_audio(&self, audio: Vec<u8>) {
+        println!("🧠 [Pipeline] Speech detected. Running Whisper STT...");
         
-        // 1. STT (Whisper Tiny ONNX)
         let transcript = match self.stt.transcribe(&audio).await {
             Ok(t) => t.trim().to_string(),
             Err(e) => {
@@ -258,11 +331,25 @@ impl PipelineOrchestrator {
             }
         };
         
+        self.process_turn_with_transcript(transcript).await;
+    }
+
+    /// Common turn processing logic for transcribed speech or direct text input
+    async fn process_turn_with_transcript(&self, transcript: String) {
+        let t_start = current_time_ms();
         println!("🗣️ [Caller]: \"{}\"", transcript);
         if transcript.is_empty() {
             self.set_state(SessionState::Idle);
             return;
         }
+
+        // Notify client of recognized transcript
+        let transcript_frame = serde_json::json!({
+            "event": "transcript",
+            "role": "user",
+            "text": transcript
+        });
+        let _ = self.telephony_ws_tx.send(transcript_frame.to_string()).await;
 
         // Record User Turn
         {
@@ -274,7 +361,7 @@ impl PipelineOrchestrator {
             });
         }
 
-        // 2. AMD (Answering Machine / Robotic Voice Cut-off Logic)
+        // AMD (Answering Machine / Robotic Voice Cut-off Logic)
         let lower_t = transcript.to_lowercase();
         if lower_t.contains("leave a message") || lower_t.contains("voicemail") || lower_t.contains("beep") {
             println!("🚨 [Pipeline] Robotic Voicemail Detected! Hanging up...");
@@ -289,7 +376,7 @@ impl PipelineOrchestrator {
             return;
         }
 
-        // 3. Multi-turn History & LLM Reasoning
+        // Multi-turn History & LLM Reasoning
         let mut history_guard = self.history.lock().await;
         history_guard.push(("user".to_string(), transcript.clone()));
         let messages = history_guard.clone();
@@ -310,7 +397,7 @@ impl PipelineOrchestrator {
             }
         };
 
-        // 4. TTS (Speaking Phase) - SEQUENTIAL SENTENCE QUEUE
+        // TTS (Speaking Phase) - SEQUENTIAL SENTENCE QUEUE
         self.set_state(SessionState::Speaking);
         
         // Audio stream channel (16-bit PCM from Piper @ 22050Hz)
@@ -326,7 +413,6 @@ impl PipelineOrchestrator {
                 if cancel_token_net.is_cancelled() {
                     break;
                 }
-                // Piper produces 22050Hz PCM; resample accurately to 8kHz μ-law
                 let mulaw_data = G711Codec::pcm_22k_to_mulaw_8k(&audio_bytes);
                 if !mulaw_data.is_empty() {
                     let payload = b64.encode(&mulaw_data);
@@ -402,6 +488,14 @@ impl PipelineOrchestrator {
         if !cancel_token.is_cancelled() {
             let total_latency = current_time_ms().saturating_sub(t_start);
             println!("✅ [Pipeline] Turn completed in {}ms. Full Response: \"{}\"", total_latency, full_agent_response);
+
+            // Send assistant transcript to client
+            let transcript_frame = serde_json::json!({
+                "event": "transcript",
+                "role": "assistant",
+                "text": full_agent_response
+            });
+            let _ = self.telephony_ws_tx.send(transcript_frame.to_string()).await;
 
             // Record Assistant Turn
             {

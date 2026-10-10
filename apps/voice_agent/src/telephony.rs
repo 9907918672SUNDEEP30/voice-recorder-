@@ -121,6 +121,14 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 
                                 println!("🚀 [Telephony] Call Started! StreamSid: {}, CallSid: {}, Caller: {:?}", stream_sid, call_sid, caller);
                                 orchestrator_recv.set_call_metadata(stream_sid, call_sid, caller, name).await;
+                                // Immediately trigger initial greeting (Divya speaks first!)
+                                orchestrator_recv.clone().trigger_initial_greeting();
+                            }
+                            "text_turn" | "text" => {
+                                if let Some(user_text) = val["text"].as_str() {
+                                    println!("💬 [Telephony] Direct text message from caller: {}", user_text);
+                                    orchestrator_recv.clone().process_text_turn(user_text.to_string());
+                                }
                             }
                             "media" => {
                                 if let Some(b64_payload) = val["media"]["payload"].as_str() {

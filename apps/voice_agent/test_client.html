@@ -11,8 +11,8 @@
         :root {
             --bg-primary: #0f1117;
             --bg-secondary: #181b24;
-            --card-bg: rgba(26, 31, 44, 0.85);
-            --border-color: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(26, 31, 44, 0.9);
+            --border-color: rgba(255, 255, 255, 0.1);
             --accent-green: #10b981;
             --accent-blue: #3b82f6;
             --accent-purple: #8b5cf6;
@@ -44,12 +44,12 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
         }
 
         header {
             text-align: center;
-            padding: 16px 0;
+            padding: 12px 0;
         }
 
         header h1 {
@@ -123,7 +123,7 @@
         }
 
         .input-group input {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.35);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 10px 14px;
@@ -148,6 +148,7 @@
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
             padding: 12px 28px;
             border-radius: 12px;
@@ -180,6 +181,13 @@
             box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
         }
 
+        .btn-blue {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
         .btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -210,12 +218,45 @@
         .dot.active-thinking { background-color: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); }
         .dot.active-speaking { background-color: var(--accent-purple); box-shadow: 0 0 10px var(--accent-purple); }
 
+        .meter-container {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .meter-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            min-width: 90px;
+            text-align: left;
+        }
+
+        .meter-bar-outer {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .meter-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            transition: width 0.05s linear;
+        }
+
         #visualizerCanvas {
             width: 100%;
-            height: 60px;
+            height: 55px;
             background: rgba(0, 0, 0, 0.25);
             border-radius: 10px;
-            margin-top: 14px;
+            margin-top: 12px;
         }
 
         .transcript-container {
@@ -224,8 +265,8 @@
             gap: 12px;
             max-height: 280px;
             overflow-y: auto;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.25);
             border-radius: 12px;
             border: 1px solid var(--border-color);
             text-align: left;
@@ -250,15 +291,15 @@
 
         .msg-caller {
             align-self: flex-start;
-            background: rgba(59, 130, 246, 0.15);
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.18);
+            border: 1px solid rgba(59, 130, 246, 0.35);
             color: #bfdbfe;
         }
 
         .msg-agent {
             align-self: flex-end;
-            background: rgba(139, 92, 246, 0.18);
-            border: 1px solid rgba(139, 92, 246, 0.35);
+            background: rgba(139, 92, 246, 0.22);
+            border: 1px solid rgba(139, 92, 246, 0.4);
             color: #ddd6fe;
         }
 
@@ -266,6 +307,27 @@
             font-size: 11px;
             color: var(--text-muted);
             font-weight: 500;
+        }
+
+        .interactive-chat-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .interactive-chat-bar input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .interactive-chat-bar input:focus {
+            border-color: var(--accent-blue);
         }
 
         .log-box {
@@ -276,7 +338,7 @@
             font-family: monospace;
             font-size: 12px;
             color: #94a3b8;
-            max-height: 120px;
+            max-height: 100px;
             overflow-y: auto;
             text-align: left;
             line-height: 1.5;
@@ -318,11 +380,20 @@
                 <button id="stopBtn" class="btn btn-stop" disabled>🛑 End Call (कॉल समाप्त करें)</button>
             </div>
 
-            <div style="margin-top: 12px;">
+            <div style="margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 14px;">
                 <div id="statusPill" class="status-pill">
                     <span id="statusDot" class="dot"></span>
                     <span id="statusText">कॉल डिस्कनेक्टेड (Disconnected)</span>
                 </div>
+            </div>
+
+            <!-- Mic VU Meter -->
+            <div class="meter-container">
+                <span class="meter-label">🎙️ Mic Level:</span>
+                <div class="meter-bar-outer">
+                    <div id="micMeterInner" class="meter-bar-inner"></div>
+                </div>
+                <span id="micVolDb" style="font-size: 11px; color: var(--text-muted); min-width: 45px;">0%</span>
             </div>
 
             <!-- Waveform Canvas -->
@@ -333,7 +404,13 @@
         <div class="card">
             <h3 style="font-size: 16px; margin-bottom: 12px; text-align: left; color: #cbd5e1;">💬 लाइव बातचीत ट्रांसक्रिप्ट (Live Conversation Feed):</h3>
             <div id="transcriptBox" class="transcript-container">
-                <div style="color: #64748b; font-size: 13px; text-align: center; padding: 20px;">कॉल शुरू करने के बाद यहाँ बातचीत दिखाई देगी...</div>
+                <div style="color: #64748b; font-size: 13px; text-align: center; padding: 20px;">कॉल शुरू होने पर दिव्या सबसे पहले अभिवादन करेगी...</div>
+            </div>
+
+            <!-- Fallback Interactive Input -->
+            <div class="interactive-chat-bar">
+                <input type="text" id="testTextInput" placeholder="💬 माइक में बोलें, या यहाँ टाइप करके Enter दबाएं (उदा: नमस्ते दिव्या)..." disabled>
+                <button id="sendTextBtn" class="btn btn-blue" disabled>Send</button>
             </div>
         </div>
 
@@ -345,7 +422,7 @@
     </div>
 
     <script>
-        // --- 100% ITU-T G.711 μ-law JavaScript Codec (Zero Mocks) ---
+        // --- 100% ITU-T G.711 μ-law JavaScript Codec ---
         const ULAW_DECODE_TABLE = new Int16Array(256);
         for (let i = 0; i < 256; i++) {
             let byte = ~i & 0xFF;
@@ -397,6 +474,10 @@
         const logBox = document.getElementById('logBox');
         const canvas = document.getElementById('visualizerCanvas');
         const canvasCtx = canvas.getContext('2d');
+        const micMeterInner = document.getElementById('micMeterInner');
+        const micVolDb = document.getElementById('micVolDb');
+        const testTextInput = document.getElementById('testTextInput');
+        const sendTextBtn = document.getElementById('sendTextBtn');
 
         function appendLog(text, className = '') {
             const el = document.createElement('div');
@@ -408,7 +489,7 @@
         }
 
         function addTranscript(role, text) {
-            if (transcriptBox.children.length === 1 && transcriptBox.children[0].innerText.includes('कॉल शुरू करने के बाद')) {
+            if (transcriptBox.children.length === 1 && transcriptBox.children[0].innerText.includes('कॉल शुरू होने पर')) {
                 transcriptBox.innerHTML = '';
             }
             const bubble = document.createElement('div');
@@ -439,7 +520,7 @@
             appendLog('⚡ [Barge-In] Playback buffer flushed immediately by server.', 'barge-in');
         }
 
-        // --- Visualizer ---
+        // --- Visualizer & VU Meter ---
         function drawVisualizer() {
             requestAnimationFrame(drawVisualizer);
             if (!analyser) return;
@@ -448,10 +529,22 @@
             const dataArray = new Uint8Array(bufferLength);
             analyser.getByteTimeDomainData(dataArray);
 
+            // Compute RMS Volume for VU Meter
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const norm = (dataArray[i] - 128) / 128;
+                sum += norm * norm;
+            }
+            const rms = Math.sqrt(sum / bufferLength);
+            const levelPct = Math.min(100, Math.round(rms * 400));
+            micMeterInner.style.width = levelPct + '%';
+            micVolDb.innerText = levelPct + '%';
+
+            // Draw Oscilloscope
             canvasCtx.fillStyle = 'rgba(15, 17, 23, 0.4)';
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
             canvasCtx.lineWidth = 2;
-            canvasCtx.strokeStyle = '#38bdf8';
+            canvasCtx.strokeStyle = levelPct > 5 ? '#10b981' : '#38bdf8';
             canvasCtx.beginPath();
 
             const sliceWidth = canvas.width * 1.0 / bufferLength;
@@ -474,17 +567,33 @@
                 statusText.innerText = "कनेक्ट हो रहा है...";
                 appendLog("Connecting to WebSocket gateway ws://" + window.location.host + "/ws/telephony...");
 
+                // 1. Setup AudioContext and force resume immediately
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                nextPlayTime = audioCtx.currentTime;
+                appendLog("AudioContext initialized (state=" + audioCtx.state + ", sampleRate=" + audioCtx.sampleRate + ")");
+
+                // 2. Request Mic Permission
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true } 
+                });
+                appendLog("Microphone access granted.");
+
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsHost = window.location.host || 'localhost:3000';
                 ws = new WebSocket(`${wsProtocol}//${wsHost}/ws/telephony`);
 
                 ws.onopen = async () => {
-                    statusText.innerText = "कॉल कनेक्टेड (Connected)! माइक एक्टिव है।";
-                    statusDot.className = "dot active-listening";
+                    statusText.innerText = "कॉल कनेक्टेड (Connected)! दिव्या बात शुरू कर रही हैं...";
+                    statusDot.className = "dot active-speaking";
                     stopBtn.disabled = false;
-                    appendLog("WebSocket connection opened. Initializing Twilio Media Stream session...");
+                    testTextInput.disabled = false;
+                    sendTextBtn.disabled = false;
+                    appendLog("WebSocket connection opened. Sending Twilio Start Frame...");
 
-                    // 1. Send Twilio Start Frame
+                    // Send Twilio Start Frame with caller metadata
                     const startFrame = {
                         event: "start",
                         streamSid: streamSid,
@@ -500,25 +609,21 @@
                     ws.send(JSON.stringify(startFrame));
                     appendLog(`Sent Twilio Start Frame: streamSid=${streamSid}`);
 
-                    // 2. Setup AudioContext (8kHz output capability)
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    nextPlayTime = audioCtx.currentTime;
-
-                    // 3. Setup Mic Stream
-                    micStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true } 
-                    });
-
+                    // 3. Setup Audio Graph
                     const source = audioCtx.createMediaStreamSource(micStream);
                     analyser = audioCtx.createAnalyser();
                     analyser.fftSize = 256;
                     source.connect(analyser);
 
-                    // Setup ScriptProcessor for downsampling to 8kHz μ-law
+                    // Silent gain node to prevent mic echoing back to speakers
+                    const silentGain = audioCtx.createGain();
+                    silentGain.gain.value = 0;
+                    silentGain.connect(audioCtx.destination);
+
                     const bufferSize = 2048;
                     scriptProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
                     analyser.connect(scriptProcessor);
-                    scriptProcessor.connect(audioCtx.destination);
+                    scriptProcessor.connect(silentGain);
 
                     const inputSampleRate = audioCtx.sampleRate;
                     const downsampleRatio = inputSampleRate / 8000;
@@ -562,6 +667,11 @@
                             statusDot.className = "dot active-speaking";
                             statusText.innerText = "🗣️ दिव्या बोल रही हैं (Divya Speaking)...";
 
+                            // Ensure audio context is active
+                            if (audioCtx.state === 'suspended') {
+                                await audioCtx.resume();
+                            }
+
                             // Decode base64 μ-law payload
                             const raw = atob(data.media.payload);
                             const len = raw.length;
@@ -579,7 +689,12 @@
 
                             const node = audioCtx.createBufferSource();
                             node.buffer = audioBuf;
-                            node.connect(audioCtx.destination);
+
+                            // Volume gain to ensure loud, clear voice
+                            const gainNode = audioCtx.createGain();
+                            gainNode.gain.value = 2.0;
+                            node.connect(gainNode);
+                            gainNode.connect(audioCtx.destination);
 
                             const now = audioCtx.currentTime;
                             const playTime = Math.max(now, nextPlayTime);
@@ -594,6 +709,8 @@
                                     statusText.innerText = "👂 लिसनिंग... आपकी बारी है (Listening).";
                                 }
                             };
+                        } else if (data.event === "transcript") {
+                            addTranscript(data.role, data.text);
                         } else if (data.event === "clear") {
                             clearPlaybackQueue();
                         } else if (data.event === "mark") {
@@ -623,11 +740,39 @@
             }
         };
 
+        function sendDirectMessage() {
+            const txt = testTextInput.value.trim();
+            if (!txt || !ws || ws.readyState !== WebSocket.OPEN) return;
+            
+            // Add user bubble
+            addTranscript('user', txt);
+            
+            // Send direct text turn to agent
+            ws.send(JSON.stringify({
+                event: "text_turn",
+                text: txt
+            }));
+            
+            testTextInput.value = '';
+            statusDot.className = "dot active-thinking";
+            statusText.innerText = "🧠 दिव्या सोच रही हैं (Thinking)...";
+            appendLog(`Sent direct message: "${txt}"`);
+        }
+
+        sendTextBtn.onclick = sendDirectMessage;
+        testTextInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                sendDirectMessage();
+            }
+        };
+
         function stopCall() {
             statusText.innerText = "कॉल डिस्कनेक्टेड (Disconnected)";
             statusDot.className = "dot";
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            testTextInput.disabled = true;
+            sendTextBtn.disabled = true;
 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 const stopFrame = { event: "stop", streamSid: streamSid };
