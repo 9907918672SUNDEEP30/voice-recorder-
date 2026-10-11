@@ -286,6 +286,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cctv_guard"
+version = "0.1.0"
+dependencies = [
+ "ai_core",
+ "anyhow",
+ "bytes",
+ "clap",
+ "crossbeam-channel",
+ "image 0.24.9",
+ "ndarray 0.15.6",
+ "ort",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "cexpr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,0 +1,31 @@
+[package]
+name = "cctv_guard"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework CCTV Guard Team"]
+description = "Pure Rust Two-Tier Proactive CCTV Guard with Edge Gatekeeper and Qwen VLM ONNX Inference"
+
+[dependencies]
+# 1. AI Core Framework Inheritance (Shared Engine, Telemetry, ONNX Adapters)
+ai_core = { path = "../../crates/core" }
+
+# 2. ONNX Runtime & Tensor Mathematics for Qwen2-VL ONNX
+ort = { version = "2.0.0-rc.6", features = ["ndarray"] }
+ndarray = "0.15"
+
+# 3. Fast Pixel Buffers & Image Encoders
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+
+# 4. Asynchronous Runtime & Networking for RTSP Ingestion
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+bytes = "1.6"
+
+# 5. Lock-Free Threading & Concurrency Channels
+crossbeam-channel = "0.5.13"
+
+# 6. Serialization & CLI Interface
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+clap = { version = "4.6", features = ["derive"] }
