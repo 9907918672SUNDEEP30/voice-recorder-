@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     ".",
     "apps/dsp_recorder",
+    "apps/video_studio",
     "crates/core",
     "crates/runtime_cli",
 ]

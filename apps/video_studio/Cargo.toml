@@ -1,0 +1,27 @@
+[package]
+name = "video_studio"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework Video Studio Team"]
+description = "Pure Rust Real-Time Studio Video Recorder with Auto-Framing and Gaze Correction"
+
+[dependencies]
+# 1. AI Core Engine Inheritance (Locked & Sealed Core)
+ai_core = { path = "../../crates/core" }
+
+# 2. Camera Hardware Interface (Pure Rust)
+nokhwa = { version = "0.10", default-features = false, features = ["input-native"] }
+
+# 3. Pure Rust Image Buffers & Pixel Containers
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+
+# 4. Lock-Free Threading & Concurrency
+crossbeam-channel = "0.5.13"
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+
+# 5. Serialization & Error Handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+ndarray = "0.15.6"
