@@ -1,0 +1,36 @@
+[package]
+name = "dsp_recorder"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework Audio Studio Team"]
+description = "Pure Rust Low-Latency Audio Recorder & Tone Cloner DSP Engine"
+
+[dependencies]
+# 1. AI Core Engine Inheritance (Locked & Sealed Core)
+ai_core = { path = "../../crates/core" }
+
+# 2. Low-Latency Real-Time Audio Hardware Interface
+cpal = "0.18.2"
+
+# 3. High-Fidelity Lossless WAV File Serialization
+hound = "3.5.1"
+
+# 4. Pure Rust Fast Fourier Transform (Spectral Analysis)
+rustfft = "6.4.1"
+
+# 5. High-Precision Sinc DSP Resampling
+rubato = "0.14.1"
+
+# 6. Lock-Free & Low-Latency Thread Synchronization
+crossbeam-channel = "0.5.13"
+
+# 7. Asynchronous Runtime & Utilities
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+
+# 8. Data Serialization & Error Handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+bytes = "1.6.0"
+ndarray = "0.15.6"

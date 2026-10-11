@@ -1,7 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    ".", "apps/voice_agent",
+    ".",
+    "apps/dsp_recorder",
     "crates/core",
     "crates/runtime_cli",
 ]
