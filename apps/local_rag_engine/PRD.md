@@ -58,7 +58,7 @@ A **Pure Rust Native Desktop/Server Appliance** that runs 100% locally on standa
 - All chunks and raw text stored in SQLite on disk MUST be encrypted with AES-256-GCM with a unique 96-bit nonce per record.
 - The 256-bit encryption key MUST NOT be stored on disk. It exists only in volatile RAM as a temporary 24-hour session key.
 
-### FR-6: 24-Hour Cloudflare DRM & Machine Binding
+### FR-6: 24-Hour Cloudflare DRM, OTA Auto-Updater & Metered Telemetry
 - Background Tokio task pings Cloudflare Worker API every 24 hours.
 - Machine fingerprinting: `machine_uuid = SHA256(Motherboard UUID + CPU Processor ID + MAC)`.
 - Validates active payment status (`paid_until >= now`).
@@ -66,6 +66,9 @@ A **Pure Rust Native Desktop/Server Appliance** that runs 100% locally on standa
   - RAM session key is explicitly overwritten with zeroes using `zeroize`.
   - In-memory vector database is purged.
   - UI locks and displays renewal payment link/QR code.
+- **Over-The-Air (OTA) Updates:** Transparent background binary updates and atomic swapping.
+- **Metered Usage Telemetry:** Reports `RagEngineMetrics` (`query_count`, `chunk_count`) during each 24-hour lease renewal.
+
 
 ### FR-7: Anti-Tamper & Anti-Clock-Rollback
 - Tracks monotonic hardware clock (`std::time::Instant`).

@@ -76,3 +76,16 @@ gantt
    - WebSocket `/api/stream/alerts` -> Pushes real-time `OutlierAlert` events as they trigger from `scanner.rs`.
 2. **Institutional Dark-Mode PWA:**
    - Clean, lightweight charting with zero third-party telemetry, 100% self-hosted.
+
+---
+
+## 🛡️ Phase 5: 24-Hour Cryptographic Lease, OTA Auto-Updater & Special Search Metering
+
+1. **24-Hour Rotating Lease:**
+   - Background worker connects to `crates/drm_guard` and Cloudflare licensing endpoint.
+   - Requires valid 24-hour cryptographic session key; zeroizes volatile memory upon non-payment.
+2. **Special Search & Deep Scan Metering:**
+   - Telemetry tracks each deep valuation calculation, multi-year DCF simulation, and volume outlier scan (`special_searches_count`, `deep_scans_count`).
+3. **OTA Binary Auto-Updater:**
+   - Cryptographic SHA-256 validation with atomic binary swapping for zero-downtime background updates.
+

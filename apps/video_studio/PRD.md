@@ -46,7 +46,14 @@ Solo video creators, educators, corporate presenters, and livestreamers face hig
 - Built-in cinematic LUT presets (`teal-orange`, `warm`, `minimal`, `film`).
 - Variance-adaptive $5\times 5$ spatial bilateral skin smoothing.
 
+### 3.5 24-Hour Cryptographic Lease, OTA Auto-Updater & Metered Video Rendering
+- **24-Hour Cryptographic Lease:** Integrated with `crates/drm_guard` for daily rotating cryptographic subscription verification.
+- **Volatile RAM Security:** Unpaid/expired lease triggers immediate `ZeroizeOnDrop` clearing of session keys, disabling video export pipeline.
+- **Over-The-Air (OTA) Updates:** Transparent background binary updates ensuring creators always have the latest LUT presets and face tracking algorithms.
+- **Metered Usage Telemetry:** Submits `VideoStudioMetrics` reporting total **render minutes** and **export counts** during daily heartbeats.
+
 ---
+
 
 ## 4. Platform & Target Environments (Desktop Creator Application)
 

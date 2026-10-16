@@ -5,7 +5,7 @@
 
 ## 📌 Executive MVP Scope
 
-The **Minimum Viable Product (MVP)** delivers an edge-native, two-tier AI CCTV security appliance built in 100% pure Rust. It operates 24/7 on ultra-low-cost hardware (Minimal Dual-Core/Celeron CPU, 2 GB RAM, SSD) without discrete GPUs or cloud dependencies, continuously filtering multi-channel RTSP streams at <5% CPU and waking up local quantized vision models only on true anomalies.
+The **Minimum Viable Product (MVP)** delivers an edge-native, two-tier AI CCTV security appliance built in 100% pure Rust for our turnkey Black-Box units. It operates 24/7 on ultra-low-cost hardware (Minimal Dual-Core/Celeron CPU, 2 GB RAM, SSD) without discrete GPUs or cloud dependencies, continuously filtering multi-channel RTSP streams at <5% CPU, transmitting **10-minute proactive health telemetry pings** (triggering WhatsApp alerts on loose cables or offline cameras), protected by **24-hour cryptographic subscription leases** and automated OTA binary updates.
 
 ---
 
@@ -24,9 +24,10 @@ gantt
     section Phase 3: Actuation & Evidence Vault
     Timestamped Incident Snapshot & Append-Only JSONL Audit     :p3_1, after p2_2, 1d
     Emergency Siren / Telegram / Webhook Dispatcher            :p3_2, after p3_1, 1d
-    section Phase 4: DRM & Appliance Packaging
-    DRM Guard Integration (Machine UUID + 24h Heartbeat + OTA) :p4_1, after p3_2, 1d
-    Windows Service (NSSM) & Linux Systemd Packaging           :p4_2, after p4_1, 1d
+    section Phase 4: Proactive Telemetry & 24h DRM
+    10-Min Health Telemetry Ping (Loose Wire & Offline Cam)    :p4_1, after p3_2, 1d
+    Cloud WhatsApp Alert Webhook & 24-Hour Cryptographic Lease :p4_2, after p4_1, 1d
+    OTA Binary Auto-Updater with Atomic Swap                   :p4_3, after p4_2, 1d
 ```
 
 ---
@@ -38,14 +39,14 @@ gantt
 | **RTSP Gatekeeper** | Multi-camera 1080p RTSP stream processing | CPU utilization strictly $<5\%$; memory baseline $<80\text{ MB}$; 0 dropped frames. |
 | **DSSIM Motion Filter** | Distinguish subtle human motion from rain/shadows | Zero false triggers on shadows or headlights; $>98\%$ detection on physical breaches. |
 | **On-Demand VLM** | Awakens local model only when motion gate trips | Cold-to-inference latency $<800\text{ ms}$; outputs structured JSON classification. |
-| **Evidence Writer** | Disk write test during simultaneous alarm triggers | Clean JPEG frame saved with JSON metadata; atomic disk flush. |
-| **DRM Subscription** | 24-hour lease expiry & clock rollback simulation | Revokes session instantly on tamper; disables camera monitoring loop. |
-| **Hardware Envelope** | Stress test on minimal 2 GB RAM machine | System stable for 24+ hours; zero memory leaks or unbounded queues. |
+| **10-Min Health Ping** | Disconnected camera or physical wire disconnect | Pings Cloudflare every 10 mins; dispatches WhatsApp notification to owner in $<5\text{s}$. |
+| **24-Hour DRM Lease** | Expired lease / non-payment simulation | Session key zeroized in RAM; AI detection halts; prompt for renewal. |
+| **OTA Auto-Updater** | Version bump and update deployment | Verifies SHA-256 hash; atomic binary swap completes seamlessly. |
 
 ---
 
 ## 🏁 MVP Launch Acceptance Criteria
 1. Full workspace compilation: `cargo check -p cctv_guard` with **0 errors**.
 2. Operates seamlessly on **Minimal CPU, 2 GB RAM, and SSD** with ultra-low power consumption.
-3. Zero recurring cloud inference costs; 100% self-contained on edge premises.
-4. Auto-recovers from camera disconnection and network drops without requiring manual restarts.
+3. 10-minute proactive telemetry reliably detects camera drops and dispatches WhatsApp alerts.
+4. 24-hour cryptographic subscription leasing fully integrated with `crates/drm_guard`.

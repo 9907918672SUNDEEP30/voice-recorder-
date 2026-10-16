@@ -37,8 +37,20 @@ Traditional CCTV and NVR security systems are **passive forensic tools**: they r
   - `Safe`: Legitimate postal courier delivery, pet/animal crossing, wind/shadows.
 - **Evidence Archival:** Automated timestamped JPEG snapshots saved under `evidence/` alongside structured append-only audit trail in `evidence/incidents.jsonl`.
 
-### 3.3 Hardware Appliance Licensing & DRM
-- Integrated with `crates/drm_guard` for 24-hour rotating cryptographic lease verification, machine UUID binding, and metered RTSP camera limits.
+### 3.3 Proactive Health Telemetry, WhatsApp Alerting & 24h Cryptographic DRM
+- **10-Minute Proactive Health Telemetry:**
+  - Background async worker pings Cloudflare `/api/telemetry/heartbeat-10m` every 10 minutes.
+  - Monitors and reports: physical wire looseness/disconnects (`wire_faults`), camera stream offline states (`offline_cameras`), and surveillance SSD utilization percentage.
+  - Cloud backend dispatches immediate **WhatsApp / Virtual Number SMS alerts** directly to the store/bank owner if a wire is loose or a camera goes offline.
+- **24-Hour Cryptographic Subscription Lease:**
+  - Binds to hardware machine fingerprint (`SHA256(Motherboard UUID + CPU Processor ID + Primary MAC)`).
+  - Obtains fresh 24-hour cryptographic AES-256 session key from Cloudflare licensing worker.
+  - If subscription payment is stopped or lease expires, volatile RAM key is immediately zeroized (`ZeroizeOnDrop`) and AI threat detection shuts down.
+- **Over-The-Air (OTA) Binary Auto-Updater:**
+  - Automated background version checking during heartbeats.
+  - Cryptographic SHA-256 hash validation before applying atomic binary swapping without interrupting local surveillance loops.
+- **Metered Billing:** Reports active camera count (`active_camera_count`) during each heartbeat.
+
 
 ---
 

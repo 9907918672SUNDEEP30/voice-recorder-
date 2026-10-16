@@ -79,6 +79,12 @@ A **Pure Rust Native Binary Application** that:
   - `master_verdict`: `StrongAccumulation`, `NeutralWatch`, `AvoidRisk`.
   - Serialized to clean JSON with $< 50\text{ ms}$ latency for PWA / Web dashboards.
 
+### FR-8: 24-Hour Cryptographic Lease, OTA Auto-Updater & Metered Special Searches
+- **24-Hour Cryptographic Lease:** Integrated with `crates/drm_guard` for daily rotating cryptographic lease verification against Cloudflare.
+- **Volatile RAM Protection:** If subscription lapses, active session encryption keys zeroize and quantitative scanner locks down.
+- **OTA Binary Auto-Updater:** Automatically checks for algorithm optimizations and stock universe schema updates, executing atomic binary swapping.
+- **Metered Special Searches:** Tracks and reports every deep valuation analysis, discounted cash flow (DCF) simulation, and volume outlier deep scan (`special_searches_count`, `deep_scans_count`) for transparent pay-per-search or tier-based billing.
+
 ---
 
 ## 4. Non-Functional Requirements & Performance SLAs

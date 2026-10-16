@@ -1,58 +1,74 @@
-# 📋 Product Requirements Document (PRD): Voice AI Calling Agent (`voice_agent`)
+# 📋 Product Requirements Document (PRD): Cloud Voice AI Calling Agent & Next.js Portal (`voice_agent`)
 
 ## 1. Executive Summary & Problem Statement
-Customer support centers, lead qualification desks, and debt-collection operations face immense staffing overhead, human burnout, and inconsistent compliance. Existing voice AI bots rely on fragile chains of cloud APIs (OpenAI, Deepgram, ElevenLabs) wrapped in Python, incurring high latency (>1.5–3.0 seconds), unpredictable cloud API bills ($0.15–$0.30 per minute), and privacy leaks.
+Customer support centers, lead generation agencies, and outbound appointment desks struggle with heavy staff turnover, high call handling costs, and human error. Traditional voice bots rely on brittle Python wrappers chained with third-party cloud APIs (OpenAI, Deepgram, ElevenLabs), causing high conversational latency (>1.5–3.0s), steep per-minute fees ($0.15–$0.30/min), and vendor lock-in.
 
-**`voice_agent`** is a standalone, 100% native Rust, full-duplex conversational telephony AI engine:
-1. **Full-Duplex Sub-300ms Conversational Turnaround:** Streamlined native pipeline with Silero VAD, Whisper STT, Qwen LLM, and Piper/OpenVoice TTS executing with zero heavy Python wrappers.
-2. **Telephony Ingestion & Audio Resampling (`codec.rs`):** Standard ITU-T G.711 $\mu$-law codec table decoding 8kHz telephony streams into 16kHz PCM with linear interpolation and zero-copy buffers.
-3. **Smart Barge-In (Interruption Handling):** Automatically halts ongoing TTS speech synthesis the instant the caller speaks, preserving natural conversational flow.
-4. **Cloudflare & Twilio / Exotel WebSocket Protocol:** Standardized bidirectional WebSocket interface (`/media-stream`) compatible with global telecom providers.
-5. **Zero Cloud Per-Minute Fee:** 100% self-hosted on edge servers or local appliances with minimal operating costs.
+**`voice_agent`** is a high-performance, 100% native Rust, cloud-deployed conversational telephony service coupled with a modern **Next.js Customer Analytics Dashboard** and a **Supabase (PostgreSQL + pgvector)** persistence layer:
+1. **Cloud-Native Telephony Engine:** Deployed on cloud servers / Linux containers, handling concurrent inbound and outbound SIP/WebSocket calls via Twilio, Exotel, or generic telephony gateways.
+2. **Sub-300ms Conversational Turnaround:** Zero heavy Python runtime. Executes Silero VAD, Whisper STT, Qwen LLM, and Piper/OpenVoice neural TTS directly on-device/cloud instance.
+3. **Supabase + pgvector & Neural RAG Knowledge:** Integrated with Supabase PostgreSQL using `pgvector`, indexed with local **BGE Small Embedding** (384-dim) and **BGE Small Reranker** for real-time sub-15ms business knowledge retrieval during live phone conversations.
+4. **Customer Next.js Management Dashboard:** Full-featured web portal for business clients to monitor live calls, view call recordings and transcripts, configure agent personas, upload knowledge base documents, and track usage.
+5. **Universal DRM & Metered Usage Licensing:** Integrated with `crates/drm_guard` for 24-hour rotating cryptographic lease verification, background OTA binary auto-updates, and metered billing tracking **total calls executed and call duration in minutes**.
 
 ---
 
-## 2. Target Market & User Personas
+## 2. System Architecture & Component Interaction
 
-| Target Segment | Typical Deployments | Key Pain Points Solved |
-|---|---|---|
-| **SME Inbound Receptionist** | Clinic appointments, restaurant bookings, repair services. | Missed calls after business hours; immediate confirmation via SMS/WhatsApp. |
-| **Outbound Lead Qualification** | Real estate, insurance, finance outreach. | High agent turnover; deterministic script compliance; sub-300ms natural conversational speed. |
-| **Payment Reminder & Collection** | Telecom, micro-lending, utility bills. | Automated polite payment follow-ups with instant localized Hindi/English voice. |
-| **Air-Gapped & Secure Enterprises** | Government, defense, healthcare helplines. | 100% on-premises data processing; zero caller audio sent to public LLM cloud vendors. |
+```mermaid
+flowchart TD
+    Telephony[Caller / Twilio / Exotel] <-->|Bidirectional Audio Stream| RustEngine[Rust Cloud Voice Engine]
+    
+    subgraph Rust Cloud Engine
+        VAD[Silero VAD]
+        STT[Whisper STT]
+        LLM[Qwen LLM Brain]
+        TTS[Piper/OpenVoice TTS]
+        DRM[crates/drm_guard 24h Lease + OTA]
+    end
+    
+    RustEngine <-->|BGE Embedding & Reranker| VectorStore[(Supabase pgvector Knowledge Base)]
+    RustEngine -->|Live Call Transcripts & Telemetry| SupabaseDB[(Supabase PostgreSQL Database)]
+    
+    subgraph Client Management Layer
+        NextJSDashboard[Next.js Customer Dashboard] <--> SupabaseDB
+        NextJSDashboard -->|Live Call Monitoring & Persona Setup| ClientUser[Business Client / Admin]
+    end
+    
+    DRM <-->|24-Hour Lease Ping & Call Minutes Telemetry| CloudflareDRM[Cloudflare Licensing Worker]
+```
 
 ---
 
 ## 3. Core Functional Requirements
 
-### 3.1 Telephony Protocol & Audio Codec
-- **Protocol:** Bidirectional Axum WebSocket server listening on port 3000 (`/media-stream`).
-- **Codec:** Native G.711 $\mu$-law 8kHz $\leftrightarrow$ 16kHz linear resampling with precomputed lookup tables.
-- **Payload Handling:** Base64 chunk serialization compliant with Twilio Media Streams and Exotel Voice WebSockets.
+### 3.1 Cloud Telephony Engine & Protocols
+- **Axum WebSocket Ingestion:** Listens on `/media-stream` accepting Twilio Media Streams, Exotel, and generic VoIP WebSockets.
+- **ITU-T G.711 $\mu$-law Codec:** Precomputed 256-entry lookup table decoding 8kHz telephony streams into 16kHz PCM with linear interpolation and zero audio clipping.
+- **Smart Barge-In (Interruption):** Continuously runs Silero VAD on 32ms frames; instantly terminates outgoing TTS speech synthesis within $<50\text{ms}$ when caller interrupts.
 
-### 3.2 Voice Activity Detection (VAD) & Barge-In
-- **Silero VAD ONNX Engine:** 512-sample (32ms) frame analysis running continuously.
-- **Dynamic Silence Detection:** Triggers end-of-speech turnaround after 600–800ms of caller silence.
-- **Instant TTS Abort:** Immediate cancellation of active audio stream playback when user speaks.
+### 3.2 Supabase Vector Knowledge Base & RAG Retrieval
+- **Supabase PostgreSQL + pgvector:** Stores company products, FAQs, pricing, and business operating rules.
+- **BGE Small Embeddings:** Generates dense 384-dimensional vector embeddings for domain context chunks.
+- **BGE Small Reranker:** Executes cross-encoder reranking on top vector candidates, injecting only high-confidence ground truth into the Qwen LLM prompt.
+- **Zero Hallucination:** Agent strictly speaks from retrieved Supabase context; politely declines unknown queries.
 
-### 3.3 Speech-to-Text (STT) & LLM Synthesis
-- **Whisper STT:** On-device Whisper-Tiny/Small ONNX inference yielding $<120\text{ms}$ transcription.
-- **Qwen Conversational Brain:** Grounded persona prompts (e.g. Maya Receptionist) streaming tokens to TTS.
-- **Hindi & Multilingual Support:** Native phonemizer and multilingual vocabulary integration.
+### 3.3 Customer Next.js Dashboard
+- **Live Call Overview:** Active calls, completed calls, average duration, and sentiment scores.
+- **Transcript & Audio Explorer:** Searchable call transcripts synced in real-time from Supabase with audio playback.
+- **Knowledge Base Manager:** Drag-and-drop PDF/text document upload that automatically chunks, embeds via BGE, and stores in `pgvector`.
+- **Persona & Script Customizer:** Edit system instructions, greeting messages, bot name, and fallback escalation phone numbers.
 
-### 3.4 Text-to-Speech (TTS) Streaming
-- **Synthesizer:** Piper / OpenVoice ONNX local neural speech generator.
-- **Chunked Playback:** Sentence-boundary streaming delivering first audio response in $<300\text{ms}$.
-- **Call Persistence:** Local SQLite call logs and optional Supabase call transcript sync.
+### 3.4 24-Hour Cryptographic Lease, OTA Auto-Updates & Metering
+- **24-Hour Lease:** Pings Cloudflare Worker every 24 hours. Overwrites session keys with `0` via `ZeroizeOnDrop` if payment lapses.
+- **Metered Usage Telemetry:** Submits `UsageMetrics` reporting **total calls completed** and **cumulative call minutes** to Cloudflare during heartbeats.
+- **OTA Binary Auto-Updater:** Checks for updates during heartbeats, verifies SHA-256 hashes, and applies atomic binary swaps without interrupting active calls.
 
 ---
 
-## 4. Platform & Target Environments (Cloud / Desktop / Server App)
+## 4. Platform & Deployment Specifications
 
-- **Application Nature:** Native Telephony Voice Service & Client App (Runs on standard cloud VPS, office desktop, laptop, or mobile telephony clients — no dedicated proprietary hardware appliance required).
-- **Supported Platforms:**
-  - **Servers & Cloud:** Linux (Ubuntu, Debian, Alpine Docker container) & Windows Server.
-  - **Desktop & Mobile:** Windows 10/11, macOS, and Mobile via WebSocket browser client (`test_client.html`).
-- **Resource Footprint:** Ultra-lean native Rust memory baseline (< 150 MB RAM). Runs effortlessly alongside existing office software or on any cheap $3/month cloud VPS without GPU.
-- **Delivery Form Factor:** Single self-contained static executable (`voice_agent.exe` / `voice_agent`) or lightweight Docker image.
-
+- **Deployment Model:** Cloud Server / VPS (Ubuntu Server 22.04 LTS / Docker container / AWS EC2 / Hetzner).
+- **Resource Footprint:** Lightweight native binary consuming $< 200\text{ MB}$ RAM on standard 2-core / 2GB cloud instances.
+- **Database:** Supabase Cloud or Self-Hosted Supabase instance (PostgreSQL 15+ with `vector` extension).
+- **Frontend Stack:** Next.js 14+ (App Router, TailwindCSS / Vanilla CSS, Supabase JS SDK, Lucide Icons).
+- **Licensing:** Managed via `crates/drm_guard` with automated 24-hour token refresh and Over-The-Air auto-updater.

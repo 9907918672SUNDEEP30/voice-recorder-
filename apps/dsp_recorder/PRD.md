@@ -48,7 +48,14 @@ In professional audio production, podcasting, voiceover recording, and broadcast
 - **VAD Integration:** Integrated with `crates/core` Silero VAD local ONNX model for optional voice-activity gating.
 - **Decoupled WAV Writer:** Background disk writer with 128KB chunk buffers ensuring zero dropped frames during disk stalls.
 
+### 3.5 24-Hour Cryptographic Lease, OTA Auto-Updater & Metered Recording
+- **24-Hour Cryptographic Lease:** Integrated with `crates/drm_guard` for 24-hour cryptographic subscription lease verification.
+- **Volatile RAM Protection:** If subscription payment is stopped, ephemeral session keys are immediately zeroized, locking studio recording.
+- **OTA Binary Auto-Updater:** Checks for updates during heartbeats, downloading and atomically swapping binaries.
+- **Metered Usage Telemetry:** Reports `DspRecorderMetrics` (`recording_seconds`, `session_count`) during 24-hour check-ins.
+
 ---
+
 
 ## 4. Platform & Target Environments (Desktop & Mobile App)
 
