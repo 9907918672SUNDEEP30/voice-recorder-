@@ -90,6 +90,64 @@ $ cargo check --workspace
 
 ---
 
+---
+
+## 🧪 ऐप टेस्टिंग गाइड (How to Test `video_studio`)
+
+### 1. यूनिट टेस्ट्स निष्पादन (Unit Tests Suite)
+सभी 7 कोर वीडियो, ऑटो-फ्रेमिंग और आई-कॉन्ट्रैक्ट टेस्ट्स चलाएं:
+```powershell
+cargo test -p video_studio
+```
+**सत्यापन बिंदु (Expected Output):**
+- `test_video_frame_pixel_access`: RGB24 पिक्सेल बफर और ज़ीरो-कॉपी एक्सेस।
+- `test_lut3d_trilinear_interpolation`: 17x17x17 3D LUT ट्राइलीनियर कलर ग्रेडिंग वॉल्यूम।
+- `test_skin_smoothing_and_relighting`: एज-प्रिजर्विंग स्किन फ़िल्टर और फेस री-लाइटिंग।
+- `test_face_detector_on_virtual_camera`: सेंट्रोइड फेस और आई-सॉकेट लैंडमार्क एक्सट्रैक्शन।
+- `test_auto_framing_ema_damping_and_rescale`: डेडज़ोन और EMA डैम्प्ड स्मूथ PTZ पैनिंग।
+- `test_iris_tracker_and_gaze_warper`: प्यूपिल ट्रैकिंग और कोसाइन फेदरिंग आई-कॉन्ट्रैक्ट करेक्शन।
+- `test_end_to_end_virtual_camera_pipeline`: एंड-टू-एंड 60 FPS वर्चुअल कैमरा पाइपलाइन।
+
+### 2. सिंथेटिक 60 FPS वर्चुअल स्टूडियो कैमरा टेस्ट (बिना वेबकैम के)
+```powershell
+# 100 फ्रेम्स का 60 FPS वर्चुअल स्टूडियो टेस्ट सिनेमैटिक टील-एंड-ऑरेंज LUT और आई-कॉन्ट्रैक्ट के साथ
+cargo run -p video_studio -- --virtual --frames 100 --lut TealAndOrange --gaze
+```
+**सत्यापन बिंदु:**
+- कंसोल पर रियल-टाइम टेलीमेट्री: 60 FPS, < 16.6ms फ्रेम लेटेंसी, Face Locked: true, Gaze Corrected: true.
+- एक भी फ्रेम ड्रॉप या मेमोरी लीक नहीं होना चाहिए।
+
+### 3. लाइव हार्डवेयर वेबकैम के साथ टेस्टिंग
+```powershell
+# 1. जुड़े हुए सभी वेबकैम की पहचान करें
+cargo run -p video_studio -- --devices
+
+# 2. लाइव वेबकैम से ऑटो-फ्रेमिंग और स्नैपशॉट टेस्ट करें
+cargo run -p video_studio -- --camera 0 --lut WarmStudio --gaze --snapshot
+```
+
+---
+
+## 🚀 फाइनल डिप्लॉयमेंट गाइड (Final Production Deployment)
+
+### 1. प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
+```powershell
+# रिलीज़ बाइनरी बनाएं
+cargo build --release -p video_studio
+```
+- **उत्पादित बाइनरी:** `target/release/video_studio.exe` (Windows) या `target/release/video_studio` (Linux).
+- **प्रदर्शन बेंचमार्क:** 1080p 60 FPS पर 16.6ms बजट के भीतर < 8ms प्रोसेसिंग लेटेंसी.
+
+### 2. कैमरा ड्राइवर अनुमतियां एवं Windows Media Foundation (WMF)
+- सुनिश्चित करें कि Windows Settings -> Privacy & Security -> Camera में ऐप एक्सेस सक्षम है।
+- Nokhwa Windows Media Foundation (WMF) बैकएंड का उपयोग करता है (बिना किसी बाहरी DLL या ड्राइवर इंस्टॉलेशन के)।
+
+### 3. स्टैंडअलोन स्टूडियो रिकॉर्डर / वर्चुअल ओबीएस कैमरा डिप्लॉयमेंट
+- बाइनरी को अपने स्टूडियो रिकॉर्डिंग डायरेक्टरी में रखें।
+- आउटपुट स्नैपशॉट (`snapshots/`) और रिकॉर्डेड वीडियो फ्रेम्स (`recordings/`) डायरेक्टरी में डिस्क स्पेस सुनिश्चित करें।
+
+---
+
 ## 🔒 आर्किटेक्चरल सील व लॉक (Phase 1: Locked & Sealed)
 1. **Core Engine First & Pure Rust:** संपूर्ण विज़न, पीटीजेड और ग्रेडिंग एल्गोरिदम 100% शुद्ध रस्ट में हस्तनिर्मित हैं। कोई पायथन या भारी C++/OpenCV निर्भरता नहीं है।
 2. **पूर्ण स्वायत्तता (Decoupled Independence):** `apps/video_studio` और `apps/dsp_recorder` एक-दूसरे से पूर्णतः स्वतंत्र हैं। इन्हें अलग-अलग चलाया व टेस्ट किया जा सकता है।

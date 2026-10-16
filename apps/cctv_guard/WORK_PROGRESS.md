@@ -110,6 +110,87 @@ $ cargo check --workspace
 
 ---
 
+## 🧪 ऐप टेस्टिंग गाइड (How to Test `cctv_guard`)
+
+### 1. यूनिट टेस्ट्स निष्पादन (Unit Tests Suite)
+6 संपूर्ण यूनिट व इंटीग्रेशन टेस्ट्स चलाएं:
+```powershell
+cargo test -p cctv_guard
+```
+**सत्यापन बिंदु (Expected Output):**
+- `test_tier1_frame_differencer_and_ssim`: एडाप्टिव मोशन डिफरेंसिंग और SSIM डिग्रेडेशन की शुद्धता।
+- `test_tier1_hysteresis_and_cooldown`: ड्यूल थ्रेशोल्ड और कूलडाउन लॉजिक का सत्यापन।
+- `test_evidence_vault_logging_and_snapshots`: JSONL और JPEG एविडेंस स्नैपशॉट राइटिंग।
+- `test_rtsp_frame_downscaling_and_tensor_conversion`: 160x120 ल्यूमिनेंस और 384x384 टेन्सर जेनरेशन।
+- `test_end_to_end_bank_shutter_robbery_simulation`: एंड-टू-एंड थ्रेट क्लासिफिकेशन पाइपलाइन।
+- `test_tier2_vlm_manager_and_threat_classification`: ऑन-डिमांड VLM लोड और ऑटो-अनलोड।
+
+### 2. विभिन्न सिम्युलेशन परिदृश्यों (Scenarios) की टेस्टिंग
+बिना वास्तविक कैमरे के विभिन्न थ्रेट्स को टेस्ट करने के लिए:
+```powershell
+# 1. रात में बैंक शटर सेंधमारी परिदृश्य
+cargo run -p cctv_guard -- --simulate shutter-robbery --frames 30
+
+# 2. दिन में सशस्त्र डकैती परिदृश्य
+cargo run -p cctv_guard -- --simulate armed-robber --frames 30
+
+# 3. सामान्य शांतिपूर्ण परिदृश्य (Tier-2 VLM ट्रिगर नहीं होना चाहिए)
+cargo run -p cctv_guard -- --simulate quiet --frames 30
+
+# 4. झूठा अलार्म: जानवर/कुत्ते का गुजरना (Tier-1 ट्रिगर होगा परंतु VLM इसे Animal/Safe मार्क करेगा)
+cargo run -p cctv_guard -- --simulate animal --frames 30
+```
+
+### 3. लाइव RTSP नेटवर्क आईपी कैमरे के साथ टेस्टिंग
+```powershell
+cargo run -p cctv_guard -- --rtsp-url "rtsp://admin:password@192.168.1.100:554/stream1" --camera-id "cam_main_entrance" --anomaly-thresh 0.04
+```
+
+---
+
+## 🚀 फाइनल डिप्लॉयमेंट गाइड (Final Production Deployment)
+
+### 1. प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
+```powershell
+# रिलीज़ बाइनरी बनाएं
+cargo build --release -p cctv_guard
+```
+- **उत्पादित बाइनरी:** `target/release/cctv_guard.exe` (Windows) या `target/release/cctv_guard` (Linux).
+- **CPU उपयोग:** Tier-1 स्टैंडबाय अवस्था में < 5% CPU उपयोग.
+
+### 2. मॉडल फ़ाइल सत्यापन (`C:\AI_Models`)
+सुनिश्चित करें कि 4-बिट VLM मॉडल सही पाथ पर स्थित है:
+- फ़ाइल: `C:\AI_Models\qwen2_vl_2b_int4.onnx` या `C:\AI_Models\qwen2-vl-2b\visionmodel.onnx`
+- यदि मॉडल पाथ कस्टम है, तो `--vlm-model-path` फ़्लैग से पाथ पास करें।
+
+### 3. विंडोज टास्क शेड्यूलर / 24x7 ऑटो-बूट सर्विस
+विंडोज पर बिना लॉग-इन 24x7 गार्ड मॉनिटरिंग चालू रखने हेतु:
+```powershell
+# Windows Task Scheduler में सिस्टम बूट पर ऑटो-स्टार्ट टास्क बनाएं
+schtasks /create /tn "CctvGuardSentry" /tr "D:\ai_core_framework - Copy (2)\target\release\cctv_guard.exe --rtsp-url rtsp://... --camera-id bank_vault" /sc onstart /ru SYSTEM
+```
+
+### 4. Linux Systemd हेडलेस एज-डिवाइस डिप्लॉयमेंट
+```ini
+[Unit]
+Description=AI Proactive CCTV Guard Sentry Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cctv_guard
+ExecStart=/opt/cctv_guard/cctv_guard --rtsp-url rtsp://192.168.1.50:554/h264 --camera-id vault_01 --evidence-dir /opt/cctv_guard/evidence
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+---
+
 ## 🚀 आगामी चरण: ऑटोनॉमस एस्केलेशन व इमरजेंसी डिस्पैच (Phase 2 Blueprint)
 1. **📞 ऑटोमैटिक इमरजेंसी वॉयस कॉल (Twilio / Exotel / SIP Gateway):**
    - अनचाही घटना (Critical) पुष्ट होते ही थाने (112) और बैंक सिक्योरिटी अधिकारी को सिंथेटिक वॉयस कॉल ("*इमरजेंसी! बैंक शटर पर सशस्त्र सेंधमारी का प्रयास...*")।

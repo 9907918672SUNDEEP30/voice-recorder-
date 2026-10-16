@@ -4,10 +4,16 @@ members = [
     ".",
     "apps/cctv_guard",
     "apps/dsp_recorder",
+    "apps/financial_engine",
+    "apps/local_rag_engine",
     "apps/nvr_core",
     "apps/video_studio",
+    "apps/voice_agent",
     "crates/core",
+    "crates/core_engine",
     "crates/runtime_cli",
+    "crates/text_parser",
+    "crates/vector_store",
 ]
 
 [package]

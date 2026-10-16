@@ -1,0 +1,45 @@
+[package]
+name = "local_rag_engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework Engineering Team"]
+description = "Pure Native Rust Local RAG Document Search, CRM, & 24-Hour Cloudflare DRM Engine"
+
+[dependencies]
+# Internal Workspace Crates
+text_parser = { path = "../../crates/text_parser" }
+vector_store = { path = "../../crates/vector_store" }
+core_engine = { path = "../../crates/core_engine" }
+ai_core = { path = "../../crates/core" }
+
+# Async & Networking
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+axum = { version = "0.7", features = ["multipart"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Serialization & CLI
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+hex = "0.4"
+rand = "0.8"
+
+# Cryptography & DRM
+sha2 = "0.10"
+ed25519-dalek = { version = "2.1", default-features = false }
+zeroize = { version = "1.8", features = ["derive"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3.10"
+
+[[bin]]
+name = "local_rag_engine"
+path = "src/main.rs"

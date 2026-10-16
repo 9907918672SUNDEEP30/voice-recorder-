@@ -25,3 +25,8 @@ logs/
 *.wav
 evidence/
 recordings/
+
+# Local databases & volatile vaults
+*.db
+*.db-shm
+*.db-wal

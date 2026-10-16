@@ -55,7 +55,68 @@ $ cargo check --workspace
 
 ---
 
+## 🧪 ऐप टेस्टिंग गाइड (How to Test `dsp_recorder`)
+
+### 1. यूनिट टेस्ट्स निष्पादन (Unit Tests Suite)
+सभी 6 कोर ऑडियो डीएसपी एवं वेव राइटर टेस्ट्स चलाएं:
+```powershell
+cargo test -p dsp_recorder
+```
+**सत्यापन बिंदु (Expected Output):**
+- `test_biquad_coefficients_finite_and_stable`: RBJ ऑडियो ईक्यू फ़िल्टर स्टेबिलिटी।
+- `test_biquad_cascade_warm_styling`: एनालॉग वार्म सैचुरेशन व हार्मोनिक्स।
+- `test_parameter_smoother_convergence`: पैरामीटर स्मूथर कन्वर्जेंस (क्लिक-फ्री ऑडियो)।
+- `test_biquad_filter_processing_sine_wave`: 1 kHz साइन वेव पर फ़िल्टरिंग।
+- `test_tone_cloner_fft_spectral_bands`: 2048-पॉइंट FFT 7-बैंड एकॉस्टिक एनवेलप मैचिंग।
+- `test_wav_writer_lossless_roundtrip`: 24-बिट PCM लॉसलेस राउंडट्रिप सत्यापन।
+
+### 2. हार्डवेयर ऑडियो डिवाइसेस की पहचान व लिस्टिंग
+सिस्टम में उपलब्ध सभी माइक्रोफोन और ऑडियो इनपुट पोर्ट्स को जांचें:
+```powershell
+cargo run -p dsp_recorder -- --list-devices
+```
+
+### 3. लाइव रिकॉर्डिंग एवं रियल-टाइम VU मीटर टेस्ट
+वास्तविक माइक्रोफोन से रिकॉर्डिंग और लाइव VU मीटर विज़ुअलाइज़ेशन:
+```powershell
+# 10 सेकंड की वार्म वोकल स्टाइलिंग रिकॉर्डिंग
+cargo run -p dsp_recorder -- --output "my_voice_warm.wav" --preset warm --duration 10
+```
+**सत्यापन बिंदु:**
+- कंसोल पर रियल-टाइम ASCII VU मीटर (`[████████░░░░░░░░] -12.4 dB`) का रिस्पॉन्सिव चलना।
+- रिकॉर्डिंग समाप्त होते ही डिस्क पर लॉसलेस 24-बिट/48kHz WAV फ़ाइल का सृजन।
+
+### 4. ऑडियो स्पेक्ट्रल एनालिसिस व टोन क्लोनिंग टेस्ट
+किसी रेफरेंस वोकल ट्रैक की टोन और EQ प्रोफ़ाइल निकालने हेतु:
+```powershell
+cargo run -p dsp_recorder -- --analyze-reference "reference_voice.wav"
+```
+
+---
+
+## 🚀 फाइनल डिप्लॉयमेंट गाइड (Final Production Deployment)
+
+### 1. प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
+```powershell
+# रिलीज़ बाइनरी संकलित करें
+cargo build --release -p dsp_recorder
+```
+- **उत्पादित बाइनरी:** `target/release/dsp_recorder.exe` (Windows) या `target/release/dsp_recorder` (Linux).
+- **लेटेंसी गारंटी:** 128/256 सैंपल्स बफर पर < 5.3ms एंड-टू-एंड हार्डवेयर ऑडियो लेटेंसी.
+
+### 2. लो-लेटेंसी ड्राइवर एवं हार्डवेयर कॉन्फ़िगरेशन
+- **Windows:** WASAPI Exclusive Mode या ASIO का उपयोग करें ताकि विंडोज ऑडियो मिक्सर री-सैंपलिंग बाईपास हो सके।
+- **Linux:** ALSA डायरेक्ट एक्सेस या PipeWire Pro-Audio प्रोफाइल सेट करें (`pw-metadata -n settings 0 clock.force-quantum 128`).
+
+### 3. स्टैंडअलोन स्टूडियो रिकॉर्डिंग डिप्लॉयमेंट
+- बाइनरी को अपने प्रोडक्शन डायरेक्टरी में कॉपी करें (उदा: `C:\Program Files\ShambhaviStudio\dsp_recorder.exe`).
+- आउटपुट डायरेक्टरी पर राइट परमिशन सुनिश्चित करें।
+- शॉर्टकट या ऑटोमेशन स्क्रिप्ट बनाकर 1-क्लिक स्टूडियो रिकॉर्डिंग शुरू करें।
+
+---
+
 ## 🔒 आर्किटेक्चरल सील व लॉक (Locked & Sealed)
 1. `apps/dsp_recorder` पूरी तरह से आत्मनिर्भर और प्रोडक्शन-रेडी है।
 2. कोर फ्रेमवर्क (`crates/core`) पूरी तरह फ्रीज और अछूता रहा है।
 3. कोई मॉक या अधूरा कोड नहीं है। सभी मैथ और DSP लॉजिक 100% वास्तविक हैं।
+
