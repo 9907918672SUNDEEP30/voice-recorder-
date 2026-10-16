@@ -1,4 +1,4 @@
-# 🏛️ शांभवी AI लैब्स — 7 ऐप्स का मास्टर डिप्लॉयमेंट आर्किटेक्चर (FINAL_DEPLOYMENT_GUIDE)
+# 🏛️ शांभवी AI लैब्स — मास्टर डिप्लॉयमेंट आर्किटेक्चर (FINAL_DEPLOYMENT_GUIDE)
 
 > **आर्किटेक्चरल सिद्धांत:** वेब की फ्लेक्सिबिलिटी (PWA/Next.js) और रस्ट की नेटिव परफॉर्मेंस (Rust Binary / DirectML GPU / Zero Python) का एक अभेद्य और व्यावसायिक संयोजन।
 
@@ -14,12 +14,14 @@
 [ 🌐 Cloud & Web ]     [ 📦 Appliance ]  [ 🖥️ Native Apps ]   [ 📱 PWA + Rust Engine ]
 - Voice AI Agent       - CCTV Guard     - DSP Recorder        - Financial Engine
 - Next.js Dashboard      (Black-Box)    - Video Studio        - Local RAG Engine
-- Supabase Sync                         - Manifestation App
+- Supabase Sync                         - Manifestation App*
+- Content Automation*
 ```
+*(चिह्नित `*` ऐप्स आगामी नियोजित प्रोजेक्ट्स हैं जिन पर काम बाद में शुरू होगा)*
 
 ---
 
-## 🚀 श्रेणी 1: [ 🌐 Cloud & Web ] — वॉयस AI कॉलिंग एजेंट एवं वेब पोर्टल
+## 🚀 श्रेणी 1: [ 🌐 Cloud & Web ] — वॉयस AI कॉलिंग एजेंट, कंटेंट ऑटोमेशन एवं वेब पोर्टल
 
 ### 1. 🎙️ वॉयस AI कॉलिंग एजेंट (`apps/voice_agent`)
 - **डिप्लॉयमेंट रूपरेखा:**
@@ -36,7 +38,16 @@
   - `crates/drm_guard` द्वारा 24-घंटे का रोटेटिंग क्रिप्टोग्राफिक लीज टोकन।
   - मीटरिंग टेलीमेट्री: **कुल पूर्ण कॉल्स और कॉल मिनट्स**।
 
+### 2. 🤖 कंटेंट ऑटोमेशन ऐप (`apps/content_automation`) — [🔜 आगामी / Planned for Next Phase]
+> **नोट (सख्त निर्देश):** यह ऐप केवल आर्किटेक्चर एवं फाइनल डिप्लॉयमेंट रोडमैप में नोट किया गया है। इस ऐप पर अभी काम शुरू नहीं करना है। इसे आगामी चरण में बनाया जाएगा।
+- **कोर इंजन (Engine):** 100% शुद्ध **Rust Binary** चलेगी (हाई-परफॉर्मेंस कंटेंट जेनरेशन, वेब स्क्रैपिंग, सोशल मीडिया API पब्लिशर, 0% पायथन)।
+- **Supabase Integration (PostgreSQL + pgvector):** रस्ट बाइनरी सीधे Supabase से जुड़ी रहेगी, जहाँ शेड्यूल्ड आर्टिकल्स, सोशल मीडिया पोस्ट्स, रील्स स्क्रिप्ट्स, और मीडिया मेटाडेटा सुरक्षित रूप से स्टोर व सिंक होंगे।
+- **Next.js Dashboard:** ग्राहक के लिए आधुनिक **Next.js वेब डैशबोर्ड** बनेगा, जो Supabase से जुड़कर विजुअल कंटेंट कैलेंडर, बल्क पोस्टिंग, AI प्रॉम्प्ट कस्टमाइज़र, और परफॉर्मेंस एनालिटिक्स दिखाएगा।
+- **लाइसेंसिंग एवं क्लाउड लीज:** `crates/drm_guard` द्वारा 24-घंटे की क्रिप्टोग्राफिक लीज + OTA ऑटो-अपडेटर (कंटेंट पोस्ट्स / जेनरेशन मीटरिंग)।
+
 ---
+
+
 
 ## 📦 श्रेणी 2: [ 📦 Appliance ] — ऑन-प्रिमाइसेस ब्लैक-बॉक्स एप्लायंस
 
@@ -126,8 +137,10 @@
 | **Manifestation App** | 🖥️ Native Desktop/Mobile *(🔜 आगामी)* | 24 घंटे | — | ✅ | Active Routine Sessions |
 | **Financial Engine** | 📱 PWA + Rust Backend | 24 घंटे | — | ✅ | Special Searches & Deep Scans |
 | **Local RAG Engine** | 📱 PWA + Local Rust Vault | 24 घंटे | — | ✅ | Search Queries & Indexed Chunks |
+| **Content Automation** | 🌐 Cloud & Web *(🔜 आगामी)* | 24 घंटे | — | ✅ | Generated Posts & Schedules |
 
 ---
+
 
 ## 🛠️ डिप्लॉयमेंट कमांड्स चीट-शीट (Quick Reference)
 
