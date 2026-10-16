@@ -4,6 +4,7 @@ members = [
     ".",
     "apps/cctv_guard",
     "apps/dsp_recorder",
+    "apps/nvr_core",
     "apps/video_studio",
     "crates/core",
     "crates/runtime_cli",

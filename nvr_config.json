@@ -1,0 +1,54 @@
+{
+  "appliance": {
+    "box_id": "shambhavi_pehredar_box_demo",
+    "tier": "lite",
+    "storage_dir": "./recordings",
+    "evidence_dir": "./evidence",
+    "disk_quota_percentage": 90,
+    "chunk_duration_secs": 900,
+    "cloud_lease_endpoint": "https://licensing.shambhavi-ai-labs.workers.dev/api/v1/lease",
+    "lease_check_interval_ms": 3600000
+  },
+  "cameras": [
+    {
+      "id": "cam_01",
+      "name": "Main Entrance",
+      "rtsp_url": "rtsp://127.0.0.1:8554/cam_01",
+      "sub_stream_url": null,
+      "fps": 25,
+      "enabled": true,
+      "motion_threshold": 0.04,
+      "cooldown_secs": 15.0
+    },
+    {
+      "id": "cam_02",
+      "name": "Cash Counter / Vault",
+      "rtsp_url": "rtsp://127.0.0.1:8554/cam_02",
+      "sub_stream_url": null,
+      "fps": 25,
+      "enabled": true,
+      "motion_threshold": 0.04,
+      "cooldown_secs": 15.0
+    },
+    {
+      "id": "cam_03",
+      "name": "Back Shutter",
+      "rtsp_url": "rtsp://127.0.0.1:8554/cam_03",
+      "sub_stream_url": null,
+      "fps": 25,
+      "enabled": true,
+      "motion_threshold": 0.04,
+      "cooldown_secs": 15.0
+    },
+    {
+      "id": "cam_04",
+      "name": "Perimeter Wall",
+      "rtsp_url": "rtsp://127.0.0.1:8554/cam_04",
+      "sub_stream_url": null,
+      "fps": 25,
+      "enabled": true,
+      "motion_threshold": 0.04,
+      "cooldown_secs": 15.0
+    }
+  ]
+}

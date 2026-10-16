@@ -14,4 +14,5 @@ pub use engine::{
     State, Step, StepOutcome,
 };
 pub use ipc::{IpcBridge, InboundCommand, OutboundMessage};
+pub use models::{COCO_CLASSES, YoloDetection, YoloV8Detector};
 pub use telemetry::{LifecycleEvent, MillisecondLogger, MonotonicClock, NoopSink, TelemetrySink};
