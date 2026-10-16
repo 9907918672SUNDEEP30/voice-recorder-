@@ -93,4 +93,12 @@
 | **2026-10-16** | Created Linux Systemd Service (`pehredar.service`) | **PASSED** | Hardened with memory ceiling (1500M) for 2GB boxes. |
 | **2026-10-16** | Created Automated Appliance Installer (`setup_appliance.sh`) | **PASSED** | Ubuntu/Debian 1-click deployment script. |
 | **2026-10-16** | Created Cloudflare Worker Script (`licensing_worker.js`) | **PASSED** | 24-hr cryptographic Ed25519 lease engine. |
-| **2026-10-16** | Git Commit & Push to Remote Repository | **COMPLETED** | Main branch synchronized with full commercial appliance stack. |
+| **2026-10-16** | Git Commit (`91ea260`) | **COMMITTED** | `feat(nvr_core): launch Shambhavi AI Labs Pehredar Box with YOLOv8m ONNX, zero-copy storage, and anti-tamper security` (47 files, +3,542 insertions). |
+| **2026-10-16** | Git Push to Remote Origin (`main`) | **PUSHED & SYNCED** | Remote `https://github.com/9907918672SUNDEEP30/voice-recorder-.git` successfully updated (`61b1319..91ea260`). |
+
+---
+
+## 🚀 Immediate Next Steps
+1. **Network RTSP Camera Ingestion:** Connect physical IP cameras (or test RTSP streams) to test real H.264 packet demuxing live.
+2. **Hardware Pilot Provisioning:** Flash Ubuntu Server minimal on 2GB RAM appliance box and run `./deploy/setup_appliance.sh`.
+3. **Cloudflare Worker & Supabase Deployment:** Deploy `licensing_worker.js` with your production Supabase database credentials.
