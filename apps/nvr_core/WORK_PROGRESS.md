@@ -98,7 +98,53 @@
 
 ---
 
-## 🚀 Immediate Next Steps
-1. **Network RTSP Camera Ingestion:** Connect physical IP cameras (or test RTSP streams) to test real H.264 packet demuxing live.
-2. **Hardware Pilot Provisioning:** Flash Ubuntu Server minimal on 2GB RAM appliance box and run `./deploy/setup_appliance.sh`.
-3. **Cloudflare Worker & Supabase Deployment:** Deploy `licensing_worker.js` with your production Supabase database credentials.
+## 🚀 Final Deployment & Production Readiness Plan (The Turnkey Roadmap)
+
+### 📱 1. "TP-Link Router" Style Local Diagnostic & Setup Portal (Embedded Mini-Web)
+*जब ग्राहक के घर या दुकान में कोई मॉनिटर नहीं लगा होगा, तो इंस्टॉलर या ग्राहक अपने मोबाइल/लैपटॉप से उसी वाई-फ़ाई पर कनेक्ट करके सेटअप और डायग्नोस्टिक देख सकेगा (जैसे TP-Link / JioFiber राउटर में होता है):*
+- [ ] **Embedded Lightweight Web Server:** बाइनरी में एक बेहद हल्का HTTP सर्वर (जैसे पोर्ट `8080` या `http://pehredar.local:8080` पर, < 5MB RAM overhead).
+- [ ] **Mobile-Responsive Installer UI:**
+  - **Slot Status Overview:** स्लॉट 1 से 8/16/32 तक कौन सा कैमरा कनेक्टेड है और कौन सा डिस्कनेक्टेड।
+  - **Live Camera Health:** हर कैमरे का लाइव रिज़ॉल्यूशन, FPS, और RTSP स्ट्रीम हेल्थ।
+  - **AI Engine Health:** YOLOv8m मॉडल लोड स्टेटस, डिटेक्शन FPS, और अलर्ट काउंट।
+  - **Storage & Disk Meter:** 128 GB SSD पर कितने दिन की रिकॉर्डिंग सुरक्षित है (FIFO क्लीनर स्टेटस)।
+  - **License & Lease Meter:** 24-घंटे का लीज काउंटडाउन (उदा: `Active: 22h 15m remaining`).
+  - **Quick Camera Setup:** नए कैमरे का IP/RTSP URL डालने या ऑन-स्क्रीन पासवर्ड बदलने की सुविधा।
+
+---
+
+### ☁️ 2. Cloudflare Worker + Supabase Central Management & Heartbeat
+- [ ] **10-Minute Health Heartbeat (टेलीमेट्री):**
+  - पहरेदार बॉक्स हर 10 मिनट में क्लाउडफ्लेयर वर्कर को एक छोटा 1 KB का पिंग भेजेगा (`{ box_id, ram_mb: 680, cam_offline: [], storage_pct: 18 }`).
+  - **फ़ायदा:** अगर किसी ग्राहक का कोई कैमरा बंद होता है या हार्ड डिस्क में दिक्कत आती है, तो ग्राहक के बोलने से पहले **शांभवी एआई लैब्स एडमिन डैशबोर्ड/WhatsApp** पर अलर्ट आ जाएगा।
+- [ ] **24-Hour Rotating Cryptographic Lease:**
+  - हर 24 घंटे में बॉक्स ऑटोमैटिकली क्लाउडफ्लेयर से नया Ed25519 साइन्ड लीज टोकन लेगा।
+  - ₹1,000/माह या ₹250/कैमरा/माह का पेमेंट चालू रहने पर टोकन तुरंत रीन्यू हो जाएगा।
+  - पेमेंट लैप्स होने पर स्क्रीन पर वार्निंग और AI प्रोटेक्शन लॉक।
+
+---
+
+### 🏭 3. Turnkey "Gold Master" Appliance Image (Factory Ready)
+- [ ] **Production Binary Stripping:** 
+  - `cargo build --release -p nvr_core` के बाद `strip` चलाकर सिंबल्स हटाना और बाइनरी को अल्ट्रा-फास्ट और रिवर्स-इंजीनियरिंग प्रूफ बनाना।
+- [ ] **1-Click Appliance USB Installer (`setup_appliance.sh`):**
+  - नई 128GB SSD पर Ubuntu Server Minimal के साथ 30 सेकंड में बाइनरी, मॉडल, और सिस्टमड सर्विस सेट करना।
+- [ ] **Motherboard Hardware Sealing:** 
+  - पहले बूट पर बॉक्स के मदरबोर्ड UUID, CPU ID और LAN MAC को परमानेंटली बाइंड करना।
+- [ ] **Watchdog & Power-Cut Auto Recovery:** 
+  - बिजली कटने के बाद वापस आते ही बिना कीबोर्ड या पासवर्ड के 5 सेकंड में सिस्टम ऑटो-बूट और 24/7 रिकॉर्डिंग चालू।
+
+---
+
+## 🛠️ Verification & Log History
+
+| Date | Action | Result | Notes |
+| :--- | :--- | :--- | :--- |
+| **2026-10-16** | Unit tests execution (`cargo test -p nvr_core`) | **PASSED (0.06s)** | 1 passed, 0 failed, ring buffer retention verified. |
+| **2026-10-16** | Clean build check (`cargo check -p nvr_core`) | **PASSED (0.74s)** | 0 errors, 0 warnings across all crates. |
+| **2026-10-16** | Created Linux Systemd Service (`pehredar.service`) | **PASSED** | Hardened with memory ceiling (1500M) for 2GB boxes. |
+| **2026-10-16** | Created Automated Appliance Installer (`setup_appliance.sh`) | **PASSED** | Ubuntu/Debian 1-click deployment script. |
+| **2026-10-16** | Created Cloudflare Worker Script (`licensing_worker.js`) | **PASSED** | 24-hr cryptographic Ed25519 lease engine. |
+| **2026-10-16** | Git Commit (`91ea260`) | **COMMITTED** | `feat(nvr_core): launch Shambhavi AI Labs Pehredar Box with YOLOv8m ONNX, zero-copy storage, and anti-tamper security` (47 files, +3,542 insertions). |
+| **2026-10-16** | Git Push to Remote Origin (`main`) | **PUSHED & SYNCED** | Remote `https://github.com/9907918672SUNDEEP30/voice-recorder-.git` successfully updated (`61b1319..91ea260`). |
+| **2026-10-16** | Updated Roadmap with TP-Link Portal Architecture | **DOCUMENTED** | Embedded Web Dashboard & 10-min Heartbeat added to master roadmap. |
