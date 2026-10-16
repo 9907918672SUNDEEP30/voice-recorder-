@@ -47,13 +47,12 @@ Customer support centers, lead qualification desks, and debt-collection operatio
 
 ---
 
-## 4. Hardware & Deployment Specifications (Ultra-Low Budget Edge Hardware)
+## 4. Platform & Target Environments (Cloud / Desktop / Server App)
 
-- **Minimum Hardware Specs (Kam se Kam Kharcha / Minimal Expenditure):**
-  - **CPU:** Minimal / Entry-level Low-Power CPU (Intel Celeron / N100 / Dual-Core x86_64 or ARM Cortex-A53/A72 SoC).
-  - **RAM:** **2 GB RAM** (Native Rust telephony pipeline uses $<150\text{MB}$ memory baseline).
-  - **Storage:** 16 GB – 32 GB SSD (Fast model loading, instant call transcript logging).
-  - **Network:** 10 Mbps broadband internet connection for VoIP SIP/WebSocket streaming.
-  - **Target Device Cost:** Ultra-low Capex (~₹3,000 – ₹7,500 / $35 – $90).
-- **Operating Systems:** Windows 10/11, Linux (Ubuntu Server 20.04/22.04 LTS, Debian), Docker container.
-- **Delivery Form Factor:** Single self-contained static executable (`voice_agent.exe` / `voice_agent`).
+- **Application Nature:** Native Telephony Voice Service & Client App (Runs on standard cloud VPS, office desktop, laptop, or mobile telephony clients — no dedicated proprietary hardware appliance required).
+- **Supported Platforms:**
+  - **Servers & Cloud:** Linux (Ubuntu, Debian, Alpine Docker container) & Windows Server.
+  - **Desktop & Mobile:** Windows 10/11, macOS, and Mobile via WebSocket browser client (`test_client.html`).
+- **Resource Footprint:** Ultra-lean native Rust memory baseline (< 150 MB RAM). Runs effortlessly alongside existing office software or on any cheap $3/month cloud VPS without GPU.
+- **Delivery Form Factor:** Single self-contained static executable (`voice_agent.exe` / `voice_agent`) or lightweight Docker image.
+

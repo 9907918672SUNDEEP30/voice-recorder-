@@ -50,14 +50,14 @@ In professional audio production, podcasting, voiceover recording, and broadcast
 
 ---
 
-## 4. Hardware & Deployment Specifications (Ultra-Low Budget Hardware)
+## 4. Platform & Target Environments (Desktop & Mobile App)
 
-- **Minimum Hardware Specs (Kam se Kam Kharcha / Minimal Investment):**
-  - **CPU:** Minimal / Entry-level Low-Power CPU (Intel Celeron / N100 / Dual-Core x86_64 or ARM Cortex-A53/A72 SoC).
-  - **RAM:** **2 GB RAM** (Native Rust DSP engine consumes <30MB RAM in production).
-  - **Storage:** 16 GB – 32 GB SSD (High-throughput solid-state disk write for lossless WAV recording).
-  - **Audio Interface:** Any standard USB Audio Class 1.0/2.0 Microphone or 3.5mm line-in.
-  - **Target Device Cost:** Ultra-low Capex (~₹2,500 – ₹6,000 / $30 – $75).
-- **Operating Systems:** Windows 10/11 (WASAPI Exclusive recommended), Linux (Kernel 5.4+, PipeWire / ALSA), macOS 12+.
-- **Delivery Form Factor:** Single self-contained static binary (`dsp_recorder.exe` / `dsp_recorder`).
+- **Application Nature:** Native Cross-Platform Desktop & Mobile Application (Runs directly on the user's existing desktop, laptop, or smartphone — no dedicated hardware purchase required).
+- **Supported Platforms:**
+  - **Desktop:** Windows 10/11 (WASAPI / DirectSound), macOS (CoreAudio), Linux (ALSA / PipeWire).
+  - **Mobile:** Android & iOS (via cross-compiled Rust core library bindings).
+- **System Footprint:** Ultra-lightweight native Rust binary (< 30 MB RAM, < 2% CPU overhead). Runs smoothly on any standard PC, laptop, or phone.
+- **Audio Inputs:** Uses the user's existing device microphone, 3.5mm headset jack, or USB audio interface.
+- **Delivery Form Factor:** Standalone desktop application (`dsp_recorder.exe` / `dsp_recorder`) and mobile app package.
+
 

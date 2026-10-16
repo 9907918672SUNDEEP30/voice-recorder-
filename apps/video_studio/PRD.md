@@ -48,13 +48,14 @@ Solo video creators, educators, corporate presenters, and livestreamers face hig
 
 ---
 
-## 4. Hardware & Deployment Specifications (Ultra-Low Budget Edge Hardware)
+## 4. Platform & Target Environments (Desktop Creator Application)
 
-- **Minimum Hardware Specs (Kam se Kam Kharcha / Minimum Expenditure):**
-  - **CPU:** Minimal / Entry-level Low-Power CPU (Intel Celeron / N100 / Dual-Core x86_64 or ARM Cortex-A53/A72 SoC).
-  - **RAM:** **2 GB RAM** (Native Rust video pipeline allocates $<80\text{MB} - 120\text{MB}$ total buffer memory; zero Python runtime).
-  - **Storage:** 16 GB – 32 GB SSD (Fast frame caching, instant OS boot).
-  - **Camera Support:** Any standard USB UVC webcam (720p/1080p @ 30 FPS).
-  - **Target Device Cost:** Ultra-low Capex (~₹3,000 – ₹7,500 / $35 – $90).
-- **Operating Systems:** Windows 10/11 (Media Foundation), Linux (V4L2 / PipeWire), macOS (AVFoundation).
-- **Delivery Form Factor:** Standalone desktop GUI / CLI executable (`video_studio.exe` / `video_studio`) or virtual webcam driver for OBS / Zoom.
+- **Application Nature:** Native Desktop Creator Application (Runs directly on the user's existing PC or laptop — no dedicated hardware purchase or edge appliance required).
+- **Supported Platforms:**
+  - **Windows:** Windows 10 / 11 (Windows Media Foundation backend).
+  - **macOS:** macOS 12+ (AVFoundation camera capture).
+  - **Linux:** Ubuntu / Fedora / Arch (V4L2 / PipeWire video).
+- **Resource Footprint:** Extremely lightweight native binary allocating $<80\text{MB} - 120\text{MB}$ RAM during 1080p 60 FPS processing with $<8\text{ms}$ latency. Runs on any standard consumer desktop or laptop.
+- **Camera Inputs:** Built-in laptop webcam or any standard plug-and-play USB UVC webcam (720p/1080p @ 30/60 FPS).
+- **Delivery Form Factor:** Standalone desktop GUI / CLI executable (`video_studio.exe` / `video_studio`) and virtual webcam output for OBS, Zoom, Teams, and Google Meet.
+

@@ -5,7 +5,7 @@
 
 ## 📌 Executive MVP Scope
 
-The **Minimum Viable Product (MVP)** provides a real-time, desktop and edge video enhancement studio built in 100% pure Rust. It equips solo creators and remote professionals with an autonomous AI cameraman (PTZ auto-framing), teleprompter eye contact correction, skin smoothing, and cinematic 3D LUT grading. The entire pipeline executes locally on ultra-low-budget hardware (Minimal Dual-Core/Celeron CPU, 2 GB RAM, SSD) with sub-15ms frame processing.
+The **Minimum Viable Product (MVP)** provides a real-time desktop video enhancement studio built in 100% pure Rust. It equips solo creators and remote professionals with an autonomous AI cameraman (PTZ auto-framing), teleprompter eye contact correction, skin smoothing, and cinematic 3D LUT grading. The entire pipeline executes locally on standard consumer PCs and laptops (Windows, macOS, Linux) with sub-8ms frame processing, $<120\text{MB}$ RAM, and zero dedicated hardware purchase required.
 
 ---
 

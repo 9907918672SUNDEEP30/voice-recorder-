@@ -5,7 +5,7 @@
 
 ## 📌 Executive MVP Scope
 
-The **Minimum Viable Product (MVP)** provides a zero-latency, professional-grade audio processing, hardware recording, and acoustic tone cloning engine built in 100% pure Rust. Designed for podcasters, voice artists, and speech appliances, it runs flawlessly on ultra-budget edge hardware (Minimal Dual-Core/Celeron CPU, 2 GB RAM, SSD) with sub-5.3ms buffer latency and zero clicks or phase distortion.
+The **Minimum Viable Product (MVP)** provides a zero-latency, professional-grade audio processing, recording, and acoustic tone cloning engine built in 100% pure Rust. Designed for podcasters, voice artists, and content creators, it runs as a native cross-platform application on standard desktop computers, laptops, and mobile devices (Windows, macOS, Linux, Android, iOS) with sub-5.3ms latency, < 30 MB RAM usage, and zero dedicated hardware purchase required.
 
 ---
 

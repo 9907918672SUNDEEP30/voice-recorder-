@@ -5,7 +5,7 @@
 
 ## 📌 Executive MVP Scope
 
-The **Minimum Viable Product (MVP)** delivers a fully functional, self-hosted telephony AI bot built in 100% pure Rust. It connects to Twilio or Exotel via bidirectional WebSockets, processes audio using local ONNX neural models (VAD, Whisper STT, Qwen LLM, TTS), and achieves sub-300ms conversational turnaround with barge-in support. It runs seamlessly on ultra-low-budget hardware (Minimal Dual-Core/Celeron CPU, 2 GB RAM, SSD) with zero per-minute cloud fees.
+The **Minimum Viable Product (MVP)** delivers a fully functional, self-hosted telephony AI service built in 100% pure Rust. It connects to Twilio or Exotel via bidirectional WebSockets, processes audio using local ONNX neural models (VAD, Whisper STT, Qwen LLM, TTS), and achieves sub-300ms conversational turnaround with barge-in support. It runs seamlessly on standard cloud servers, office PCs, or mobile test clients with < 150 MB RAM, zero dedicated hardware purchase, and zero per-minute cloud fees.
 
 ---
 
