@@ -1,0 +1,32 @@
+[package]
+name = "drm_guard"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework Security & DRM Architecture Team"]
+description = "Universal Shared DRM Guard & Metered Usage Licensing Framework for AI Core Framework"
+
+[dependencies]
+# Async runtime & networking
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+async-trait = "0.1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Serialization & Math
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+hex = "0.4"
+rand = "0.8"
+
+# Cryptography & Security
+sha2 = "0.10"
+zeroize = { version = "1.8", features = ["derive"] }
+aes-gcm = "0.10"
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+tempfile = "3.10"

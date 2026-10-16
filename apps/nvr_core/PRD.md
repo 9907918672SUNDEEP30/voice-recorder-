@@ -30,7 +30,8 @@ Instead of using non-upgradable ready-made mini-PCs, Shambhavi AI Labs utilizes 
 
 | Tier | Camera Capacity | Target Processor | RAM | Storage Configuration | Target Customer |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Lite** | **Up to 8 Cameras** | Intel N100 / N200 Quad-Core | 8 GB DDR4/5 | 128 GB NVMe + 1 TB Surveillance SATA | Small stores, residences, clinics, small offices |
+| **Nano (Ultra-Budget)** | **1 to 4 Cameras** | Minimal CPU (Celeron / Dual-Core / ARM SoC) | **2 GB RAM** | 64 GB – 128 GB SSD | Entry-level shops, home gates, single kiosks (kam se kam kharcha) |
+| **Lite** | **Up to 8 Cameras** | Intel N100 / N200 Quad-Core | 4 GB – 8 GB DDR4 | 128 GB SSD + 1 TB Surveillance SATA | Small stores, residences, clinics, small offices |
 | **Pro** | **Up to 16 Cameras** | Intel Core i3 / i5 (12th/13th Gen) | 16 GB DDR4/5 | 256 GB NVMe + 2 TB–4 TB Surveillance SATA | Showrooms, supermarkets, schools, mid-size warehouses |
 | **Enterprise**| **Up to 32 Cameras** | Intel Core i7 (12th/13th/14th Gen) | 32 GB DDR5 | 512 GB NVMe + 4 TB–8 TB Surveillance SATA | Large factories, gated societies, shopping malls |
 | **Multi-Box Cluster** | **32+ to 64+ Cameras** | 2x Clustered 32-Ch Boxes | Clustered | Redundant Clustered Storage | Zero Single-Point-of-Failure (SPOF) enterprise deployments |

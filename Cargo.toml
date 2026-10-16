@@ -11,6 +11,7 @@ members = [
     "apps/voice_agent",
     "crates/core",
     "crates/core_engine",
+    "crates/drm_guard",
     "crates/runtime_cli",
     "crates/text_parser",
     "crates/vector_store",

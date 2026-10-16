@@ -136,6 +136,7 @@ cargo run -p video_studio -- --camera 0 --lut WarmStudio --gaze --snapshot
 cargo build --release -p video_studio
 ```
 - **उत्पादित बाइनरी:** `target/release/video_studio.exe` (Windows) या `target/release/video_studio` (Linux).
+- **हार्डवेयर बजट (कम से कम खर्च):** Minimal Dual-Core / Celeron CPU, **2 GB RAM** (इंजन केवल <120 MB RAM उपयोग करता है), और SSD.
 - **प्रदर्शन बेंचमार्क:** 1080p 60 FPS पर 16.6ms बजट के भीतर < 8ms प्रोसेसिंग लेटेंसी.
 
 ### 2. कैमरा ड्राइवर अनुमतियां एवं Windows Media Foundation (WMF)
