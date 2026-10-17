@@ -95,14 +95,19 @@
   - RBJ बाइक्वाड ईक्यू, स्पेक्ट्रल टोन क्लोनिंग, और 24-बिट PCM लॉसलेस वेव रिकॉर्डिंग।
 - **लाइसेंसिंग:** 24-घंटे की क्रिप्टोग्राफिक लीज + OTA ऑटो-अपडेटर (रिकॉर्डिंग आवर्स मीटरिंग)।
 
-### 6. 🧘 मैनिफेस्टेशन ऐप (`apps/manifestation_app`) — [🔜 आगामी / Planned for Next Phase]
-> **नोट:** यह ऐप वर्तमान में वर्कस्पेस में निर्मित नहीं है। इसे आगामी चरण में शुद्ध नेटिव रस्ट ऐप के रूप में बनाया जाएगा।
+### 6. 🧘 मैनिफेस्टेशन सुपर ऐप (`apps/manifestation_app`)
 - **डिप्लॉयमेंट रूपरेखा:**
-  - डेस्कटॉप और मोबाइल के लिए **Pure Native App** (भविष्य में बनने वाला)।
-- **मुख्य क्षमताएं (नियोजित):**
-  - 100% लोकल स्टोरेज और ज़ीरो-लेटेंसी माइंडसेट रूटीन।
-  - न्यूरल अफर्मेशन शेड्यूलर, सब्लिमिनल ऑडियो जनरेटर और स्ट्रिक ट्रैकर।
-- **लाइसेंसिंग:** 24-घंटे की क्रिप्टोग्राफिक लीज + OTA ऑटो-अपडेटर।
+  - 100% शुद्ध **Native Rust Binary** + एम्बेडेड लक्ज़री ग्लासमोर्फिज्म वेब पोर्टल (`http://localhost:9090`)।
+  - किसी बाहरी Node.js, NPM या CDN की आवश्यकता नहीं; संपूर्ण HTML5/CSS3/JS बाइनरी में एम्बेडेड है।
+- **मुख्य क्षमताएं:**
+  - **"Core-Engine First" AI इमेज जनरेशन:** `crates/core` (`ai_core`) के `ImageGenAdapter` व SD-Turbo Safetensors इंजन द्वारा सिंगल-स्टेप 512x512 लिविंग विजन बोर्ड सिंथेसिस।
+  - **निकोला टेस्ला 3-6-9 मैनिफेस्टेशन जर्नल:** सुबह (3x), दोपहर (6x), रात (9x) इंटेंशन लॉगर व वाइब्रेशनल रेजोनेंस ट्रैकर।
+  - **मिरर अफ़र्मेशन चैंबर:** रियल-टाइम स्पीच/टेक्स्ट कंविक्शन स्कोरिंग व सबकॉन्शियस इंप्रिंटिंग फीडबैक।
+  - **थिटा स्लीप मेडिटेशन इंजन:** 528 Hz (ट्रांसफॉर्मेशन व मिरेकल्स) व 432 Hz सोल्फ़ेगियो फ़्रीक्वेंसी स्क्रिप्ट्स + 6.0 Hz थिटा वेव ब्रेनवेव एंट्रेनमेंट।
+- **लाइसेंसिंग एवं मीटरिंग:**
+  - `crates/drm_guard` द्वारा 24-घंटे की क्रिप्टोग्राफिक लीज + 24h ऑफलाइन ग्रेस।
+  - `ManifestationMetrics`: अफ़र्मेशन काउंट, मेडिटेशन मिनट्स, और जनरेटेड विजन बोर्ड्स की ऑटोमैटिक मीटरिंग।
+
 
 ---
 
@@ -141,38 +146,156 @@
 | **3** | **Voice Studio** (`dsp_recorder`) | 🖥️ Native Desktop/Mobile | 24 घंटे | — | ✅ | Recording Minutes & Sessions | ✅ Ready |
 | **4** | **Video Studio** (`video_studio`) | 🖥️ Native Desktop | 24 घंटे | — | ✅ | Render Minutes & Export Count | ✅ Ready |
 | **5** | **Financial App** (`financial_engine`) | 📱 PWA + Rust Backend | 24 घंटे | — | ✅ | Special Searches & Deep Scans | ✅ Ready |
-| **6** | **Manifestation App** (`manifestation_app`) | 🖥️ Native Desktop/Mobile | 24 घंटे | — | ✅ | Active Routine Sessions | 🔜 आगामी (Planned) |
+| **6** | **Manifestation App** (`manifestation_app`) | 🖥️ Native Desktop / Axum SPA | 24 घंटे | — | ✅ | Affirmations, Meditations, Visions | ✅ Ready |
 | **7** | **Local RAG Engine** (`local_rag_engine`) | 📱 PWA + Local Rust Vault | 24 घंटे | — | ✅ | Search Queries & Indexed Chunks | ✅ Ready |
 | **8** | **Content Automation** (`content_automation`) | 🌐 Cloud Rust + Next.js PWA | 24 घंटे | — | ✅ | Generated Posts & Schedules | 🔜 आगामी (Planned) |
 
+---
+
+## 🧪 1. यूनिवर्सल टेस्टिंग प्रोटोकॉल (How to Test & Verify — टेस्ट कैसे करनी है)
+
+डिप्लॉयमेंट से पूर्व प्रत्येक ऐप को 5-स्तरीय परीक्षण से गुजरना अनिवार्य है:
+
+### Level 1: कंपाइलेशन व स्टेटिक एनालिसिस ऑडिट (Static Analysis)
+```powershell
+# संपूर्ण वर्कस्पेस में 0 एरर और 0 वार्निंग्स सुनिश्चित करें
+cargo check --workspace
+cargo clippy --workspace -- -D warnings
+```
+
+### Level 2: ऑटोमेटेड यूनिट व इंटीग्रेशन टेस्ट सुइट (Automated Test Suite)
+```powershell
+# संपूर्ण वर्कस्पेस के सभी यूनिट टेस्ट्स रन करें
+cargo test --workspace -- --nocapture
+
+# विशिष्ट ऐप्स के टेस्ट्स:
+cargo test -p voice_agent
+cargo test -p cctv_guard
+cargo test -p nvr_core
+cargo test -p dsp_recorder
+cargo test -p video_studio
+cargo test -p financial_engine
+cargo test -p manifestation_app
+```
+
+### Level 3: एंड-टू-एंड फंक्शनल व सिम्युलेशन टेस्ट (E2E Verification)
+- **Voice Agent:** `apps/voice_agent/test_client.html` खोलकर माइक से बोलें और < 300ms में ऑडियो उत्तर व बार्ज-इन जांचें।
+- **CCTV Guard:** `cargo run -p cctv_guard -- --simulate "NightIntruderShutter"` चलाकर टियर-1 मोशन डिटेक्शन और टियर-2 Qwen VLM अलर्ट जांचें।
+- **NVR Core:** `cargo run -p nvr_core -- --simulate --cameras 4 --port 8080` चलाकर TP-Link वेब पोर्टल (`http://localhost:8080`) पर 4-स्टेप विज़ार्ड देखें।
+- **DSP Recorder:** `cargo run -p dsp_recorder -- --list-devices` और `--preset warm` से 24-बिट/48kHz लॉसलेस WAV रिकॉर्डिंग टेस्ट करें।
+- **Video Studio:** `cargo run -p video_studio -- --virtual --frames 100 --lut TealAndOrange --gaze` चलाकर 60 FPS पर < 8ms लेटेंसी पुष्टि करें।
+- **Financial Engine:** `cargo run -p financial_engine` चलाकर < 50ms में 5000+ स्टॉक्स इन-मेमरी एनालिसिस और कॉन-कॉल Regex माइनिंग जांचें।
+- **Manifestation App:** `cargo run -p manifestation_app -- --port 9090` चलाकर `http://localhost:9090` पर सिंगल-स्टेप SD-Turbo विजन बोर्ड जनरेशन, 3-6-9 जर्नल और 528 Hz थिटा मेडिटेशन टेस्ट करें।
+
+### Level 4: 24-घंटे DRM क्रिप्टोग्राफिक लीज व मशीन फिंगरप्रिंट टेस्ट
+- जांचें कि मशीन का SHA-256 डिजिटल फिंगरप्रिंट सही ढंग से जनरेट हो रहा है (`DRMGuard::machine_uuid()`)।
+- इंटरनेट बंद करके ऐप चलाएं; 24 घंटे का ऑफलाइन ग्रेस पीरियड बिना किसी क्रैश के चालू रहना चाहिए।
+
+### Level 5: लेटेंसी बजट व मेमोरी सीलिंग स्ट्रेस टेस्ट (Memory Leak Check)
+- ऐप को 1 घंटे तक निरंतर स्ट्रेस में चलाएं और टास्क मैनेजर या `Get-Process` से पुष्टि करें कि RAM बजट के भीतर ही स्थिर है:
+  - `manifestation_app`: < 45 MB RAM
+  - `voice_agent`: < 150 MB RAM
+  - `cctv_guard` / `nvr_core`: < 900 MB RAM (2 GB Black Box बजट)
+  - `financial_engine`: < 150 MB RAM (5000+ स्टॉक्स)
 
 ---
 
+## 📋 2. प्री-डिप्लॉयमेंट चेकलिस्ट (Pre-Deployment Checklist — क्या-क्या ओके करना है)
 
-## 🛠️ डिप्लॉयमेंट कमांड्स चीट-शीट (Quick Reference)
+डिप्लॉयमेंट से ठीक पहले इन 7 बिंदुओं पर टिक (OK) लगाना अनिवार्य है:
 
-### 1. प्रोडक्शन बाइनरी संकलन (Release Builds)
+- [ ] **1. Zero Compiler Warnings:** `cargo check --release --workspace` में शुद्ध **0 त्रुटियां (Zero Errors)** और **0 वार्निंग्स (Zero Warnings)**।
+- [ ] **2. Test Suite 100% Passed:** वर्कस्पेस के सभी यूनिट व इंटीग्रेशन टेस्ट्स 100% सफल।
+- [ ] **3. Model Files Integrity (`C:\AI_Models\...`):** आवश्यक सभी मॉडल्स अपनी पूर्ण बाइट साइज़ के साथ डिस्क पर मौजूद हैं:
+  - `C:\AI_Models\sd_turbo` (कुल 5.16 GB — UNet 3.46 GB, Text Encoder 1.36 GB, VAE 334 MB, Tokenizer, Scheduler)
+  - `C:\AI_Models\yolov8m.onnx` (103.7 MB)
+  - `C:\AI_Models\silero_vad.onnx` (< 2 MB)
+  - `C:\AI_Models\whisper_tiny_onnx` (Encoder, Decoder, Tokenizer)
+  - `C:\AI_Models\qwen2-vl-2b` या `qwen2.5_0.5b.onnx`
+  - `C:\AI_Models\piper_hi` (Hindi TTS) व `OpenVoice-ONNX-v2`
+  - `C:\AI_Models\bge_small_embedding` व `bge_reranker`
+- [ ] **4. "Core-Engine First" आर्किटेक्चरल अखंडता:** सभी AI मॉडल्स केंद्रीय रूप से `crates/core` (`ai_core`) में स्थित हैं; किसी भी ऐप में डुप्लीकेट मॉडल कोड नहीं है।
+- [ ] **5. 24-घंटे लीज व सुरक्षा सत्यापन:** `crates/drm_guard` की 24h क्रिप्टोग्राफिक लीज सक्रिय है और मशीन बाइंडिंग लॉक है।
+- [ ] **6. नेटवर्क पोर्ट्स व फ़ायरवॉल उपलब्धता:** आवश्यक पोर्ट्स (3000, 8080, 9090) खाली हैं और विंडोज/लिनक्स फ़ायरवॉल में स्वीकृत हैं।
+- [ ] **7. रिसोर्स बजट व मेमोरी सीलिंग:** किसी भी ऐप में मेमोरी लीक नहीं है और RAM निर्धारित सीलिंग के अंदर है।
+
+---
+
+## 🚀 3. फाइनल डिप्लॉयमेंट प्रक्रिया (Final Deployment Procedure — फाइनल डिप्लॉय कैसे करना है)
+
+### Step 1: प्रोडक्शन बाइनरी संकलन (Release Builds)
 ```powershell
-# संपूर्ण वर्कस्पेस को ऑप्टिमाइज़्ड रिलीज़ मोड में बिल्ड करें
+# संपूर्ण वर्कस्पेस को हाई-ऑप्टिमाइज़ेशन LTO रिलीज़ मोड में संकलित करें
 cargo build --release --workspace
 
-# विशिष्ट ऐप बाइनरी बिल्ड करें
+# विशिष्ट ऐप बाइनरी बिल्ड:
 cargo build --release -p voice_agent
 cargo build --release -p cctv_guard
+cargo build --release -p nvr_core
 cargo build --release -p video_studio
 cargo build --release -p dsp_recorder
 cargo build --release -p financial_engine
+cargo build --release -p manifestation_app
 cargo build --release -p local_rag_engine
 ```
+उत्पादित बाइनरी पाथ: `target/release/<app_name>.exe` (Windows) या `target/release/<app_name>` (Linux)।
 
-### 2. क्लाउडफ्लेयर लाइसेंसिंग वर्कर डिप्लॉयमेंट
+### Step 2: क्लाउड लाइसेंसिंग वर्कर व Supabase माइग्रेशन
 ```powershell
+# 1. Cloudflare DRM Licensing Worker डिप्लॉय करें
 cd crates/drm_guard/scripts
 npx wrangler deploy universal_licensing_worker.js --name "universal-drm-guard"
+
+# 2. Supabase pgvector स्कीमा माइग्रेट करें
+# apps/voice_agent/supabase_schema.sql को Supabase SQL एडिटर में रन करें
 ```
 
-### 3. सुपबेस pgvector स्कीमा माइग्रेशन
+### Step 3: 24x7 ऑटो-स्टार्ट प्रोडक्शन सर्विस डिप्लॉयमेंट
+
+#### A. Windows Task Scheduler / NSSM (सिस्टम बूट पर ऑटो-स्टार्ट बिना यूजर लॉगिन):
 ```powershell
-# Supabase CLI या Supabase वेब SQL एडिटर में निष्पादित करें:
-# apps/voice_agent/supabase_schema.sql
+# 1. Manifestation Super App सर्विस
+schtasks /create /tn "ShambhaviManifestation" `
+  /tr "'D:\ai_core_framework - Copy (2)\target\release\manifestation_app.exe' --port 9090 --sd-models-dir 'C:\AI_Models\sd_turbo'" `
+  /sc onstart /ru SYSTEM
+
+# 2. CCTV Guard Sentry सर्विस
+schtasks /create /tn "CctvGuardSentry" `
+  /tr "'D:\ai_core_framework - Copy (2)\target\release\cctv_guard.exe' --rtsp-url 'rtsp://admin:pass@192.168.1.50:554/h264' --camera-id vault_01" `
+  /sc onstart /ru SYSTEM
+
+# 3. Voice Agent NSSM सर्विस
+nssm install VoiceAgent "D:\ai_core_framework - Copy (2)\target\release\voice_agent.exe"
+nssm set VoiceAgent Start SERVICE_AUTO_START
+nssm start VoiceAgent
 ```
+
+#### B. Linux Headless Server / Black-Box Systemd Service (`/etc/systemd/system/`):
+```ini
+[Unit]
+Description=Shambhavi AI Core Engine Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/shambhavi/app
+ExecStart=/opt/shambhavi/app/app_binary
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target
+```
+सक्षम व सक्रिय करें:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now app_name.service
+sudo systemctl status app_name.service
+```
+
+### Step 4: साइलेंट Jio TV स्टाइल OTA ऑटो-अपडेटर सत्यापन
+- पुष्टि करें कि बाइनरी बैकग्राउंड में बिना लाइव रिकॉर्डिंग या एक्टिव कॉल रोके नए अपडेट को वैलिडेट करके एटॉमिकली स्वैप (`replace_executable`) कर सकती है।
+
