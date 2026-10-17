@@ -29,6 +29,9 @@ lopdf = "0.32"
 regex = "1.10"
 anyhow = "1.0"
 
+# 6. Universal DRM Guard & 24h Licensing
+drm_guard = { path = "../../crates/drm_guard" }
+
 [[bin]]
 name = "financial_engine"
 path = "src/main.rs"

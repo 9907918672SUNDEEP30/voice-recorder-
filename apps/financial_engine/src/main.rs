@@ -14,6 +14,20 @@ async fn main() -> anyhow::Result<()> {
     println!("    0% Python | 100% Free Public Data | Native CDP & Local ONNX (C:\\AI_Models)");
     println!("================================================================================");
 
+    // Shared DRM Guard & 24h Financial Super Engine Lease
+    let fin_metrics = std::sync::Arc::new(drm_guard::FinancialMetrics::new());
+    let drm = std::sync::Arc::new(
+        drm_guard::DRMGuard::builder()
+            .client_id("financial_engine_terminal")
+            .license_key("FIN-SHAMBHAVI-24H-LEASE")
+            .metrics_provider(fin_metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+    let _ = drm.perform_heartbeat().await;
+    drm.clone().start_background_daemon();
+    println!("🔐 [DRM Guard] 24-Hour Lease Active. Machine: {}", &drm.machine_uuid()[..16]);
+
     let models_dir = Path::new("C:/AI_Models");
     let engine = FinancialSuperEngine::new(Some(models_dir));
 

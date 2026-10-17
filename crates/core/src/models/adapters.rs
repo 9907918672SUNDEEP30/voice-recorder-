@@ -86,3 +86,18 @@ pub trait RerankerAdapter: Send + Sync {
     /// Reranks a list of retrieved documents based on their relevance to a query (e.g., using BGE-Reranker)
     async fn rerank(&self, query: &str, documents: Vec<String>) -> Result<Vec<(String, f32)>>;
 }
+
+#[async_trait]
+pub trait ImageGenAdapter: Send + Sync {
+    /// Generates image from text prompt, optional negative prompt, width, height, and steps.
+    /// Returns encoded PNG or JPEG image bytes.
+    async fn generate_image(
+        &self,
+        prompt: &str,
+        negative_prompt: Option<&str>,
+        width: usize,
+        height: usize,
+        steps: usize,
+    ) -> Result<Vec<u8>>;
+}
+

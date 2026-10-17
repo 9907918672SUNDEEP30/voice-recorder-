@@ -456,6 +456,7 @@ dependencies = [
  "bytes",
  "clap",
  "crossbeam-channel",
+ "drm_guard",
  "image 0.24.9",
  "ndarray 0.15.6",
  "ort",
@@ -1184,6 +1185,7 @@ dependencies = [
  "bytes",
  "cpal",
  "crossbeam-channel",
+ "drm_guard",
  "hound",
  "ndarray 0.15.6",
  "rubato",
@@ -1314,6 +1316,7 @@ dependencies = [
  "chromiumoxide",
  "chrono",
  "dashmap",
+ "drm_guard",
  "futures",
  "lopdf",
  "regex",
@@ -2298,6 +2301,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "manifestation_app"
+version = "0.1.0"
+dependencies = [
+ "ai_core",
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "clap",
+ "drm_guard",
+ "hound",
+ "image 0.24.9",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http 0.5.2",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2740,11 +2763,14 @@ version = "0.1.0"
 dependencies = [
  "ai_core",
  "anyhow",
+ "async-trait",
+ "axum",
  "base64 0.22.1",
  "bytes",
  "chrono",
  "clap",
  "crossbeam-channel",
+ "drm_guard",
  "image 0.24.9",
  "minifb",
  "ndarray 0.15.6",
@@ -2755,6 +2781,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "tower-http 0.5.2",
 ]
 
 [[package]]
@@ -4749,6 +4776,7 @@ dependencies = [
  "ai_core",
  "anyhow",
  "crossbeam-channel",
+ "drm_guard",
  "image 0.24.9",
  "ndarray 0.15.6",
  "nokhwa",
@@ -4768,6 +4796,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bytes",
+ "drm_guard",
  "futures",
  "ndarray 0.15.6",
  "ort",

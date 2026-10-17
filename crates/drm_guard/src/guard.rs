@@ -27,8 +27,8 @@ struct InnerDrmState {
 }
 
 pub struct DRMGuard<M: UsageMetricProvider> {
-    client_id: String,
-    license_key: String,
+    client_id: Arc<RwLock<String>>,
+    license_key: Arc<RwLock<String>>,
     heartbeat_url: Option<String>,
     fingerprint: MachineFingerprint,
     clock_guard: MonotonicClockGuard,
@@ -119,8 +119,8 @@ impl<M: UsageMetricProvider> DRMGuardBuilder<M> {
         };
 
         Ok(DRMGuard {
-            client_id,
-            license_key,
+            client_id: Arc::new(RwLock::new(client_id)),
+            license_key: Arc::new(RwLock::new(license_key)),
             heartbeat_url: self.heartbeat_url,
             fingerprint,
             clock_guard,
@@ -143,6 +143,25 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
 
     pub fn machine_uuid(&self) -> &str {
         &self.fingerprint.machine_uuid
+    }
+
+    pub fn fingerprint(&self) -> &MachineFingerprint {
+        &self.fingerprint
+    }
+
+    pub async fn client_id(&self) -> String {
+        self.client_id.read().await.clone()
+    }
+
+    pub async fn license_key(&self) -> String {
+        self.license_key.read().await.clone()
+    }
+
+    pub async fn set_credentials(&self, client_id: impl Into<String>, license_key: impl Into<String>) {
+        let mut cid = self.client_id.write().await;
+        *cid = client_id.into();
+        let mut lk = self.license_key.write().await;
+        *lk = license_key.into();
     }
 
     pub fn app_name(&self) -> &'static str {
@@ -193,9 +212,10 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         let is_valid = (st.status == LicenseStatus::Active || st.status == LicenseStatus::ExpiringSoon)
             && st.expires_at > now
             && st.session_key.is_some();
+        let client_id = self.client_id.read().await.clone();
 
         DrmStatusInfo {
-            client_id: self.client_id.clone(),
+            client_id,
             app_name: self.metrics_provider.app_name().to_string(),
             current_version: self.updater.current_version().to_string(),
             machine_uuid: self.fingerprint.machine_uuid.clone(),
@@ -217,10 +237,12 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         let now = Utc::now().timestamp();
         let nonce = format!("{:016x}", rand::random::<u64>());
         let metrics = self.metrics_provider.collect_metrics().await;
+        let client_id = self.client_id.read().await.clone();
+        let license_key = self.license_key.read().await.clone();
 
         let req = HeartbeatRequest {
-            client_id: self.client_id.clone(),
-            license_key: self.license_key.clone(),
+            client_id,
+            license_key: license_key.clone(),
             machine_uuid: self.fingerprint.machine_uuid.clone(),
             app_name: self.metrics_provider.app_name().to_string(),
             current_version: Some(self.updater.current_version().to_string()),
@@ -293,13 +315,14 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         }
 
         // Autonomous / Offline Grace Evaluation:
-        if !self.license_key.is_empty() {
+        let license_key = self.license_key.read().await.clone();
+        if !license_key.is_empty() {
             let lease_duration = 86400; // 24 hours
             let expires_at = now + lease_duration;
 
             let window_slot = now / lease_duration;
             let mut hasher = Sha256::new();
-            hasher.update(self.license_key.as_bytes());
+            hasher.update(license_key.as_bytes());
             hasher.update(self.fingerprint.machine_uuid.as_bytes());
             hasher.update(self.metrics_provider.app_name().as_bytes());
             hasher.update(window_slot.to_le_bytes());
@@ -374,5 +397,17 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                 }
             }
         });
+    }
+
+    /// Returns currently discovered OTA update metadata, if any.
+    pub async fn check_ota_update(&self) -> Option<UpdateMetadata> {
+        let st = self.state.read().await;
+        st.update_available.clone()
+    }
+
+    /// Sets or clears available OTA update metadata.
+    pub async fn set_update_available(&self, update: Option<UpdateMetadata>) {
+        let mut st = self.state.write().await;
+        st.update_available = update;
     }
 }

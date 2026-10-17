@@ -118,7 +118,22 @@ cloudflared tunnel --url http://localhost:3000
 
 ---
 
-## 🚀 फाइनल डिप्लॉयमेंट गाइड (Final Production Deployment)
+## 🚀 फाइनल डिप्लॉयमेंट चेकलिस्ट एवं प्रोडक्शन गाइड (Final Deployment Checklist & Procedure)
+
+### 📋 प्री-डिप्लॉयमेंट चेकलिस्ट (क्या-क्या चीजें 100% ओके करके डिप्लॉय करना है):
+- [ ] **1. कोड व वार्निंग्स ऑडिट:** `cargo check --release -p voice_agent` में 0 त्रुटियां व 0 वार्निंग्स।
+- [ ] **2. टेस्ट्स 100% उत्तीर्ण:** सभी यूनिट टेस्ट्स (`cargo test -p voice_agent`) सफल होने चाहिए।
+- [ ] **3. वॉइस मॉडल्स पूर्णता (`C:\AI_Models`):**
+  - `silero_vad.onnx` (< 2 MB)
+  - `whisper_tiny_onnx` (Encoder, Decoder, Tokenizer)
+  - `qwen2-vl-2b` या `qwen2.5_0.5b.onnx`
+  - `piper_hi` (Hindi TTS ONNX) व `OpenVoice-ONNX-v2`
+- [ ] **4. लेटेंसी SLA सत्यापन:** एंड-टू-एंड पाइपलाइन लेटेंसी **<= 300ms** (Human-Parity Full Duplex)।
+- [ ] **5. मेमोरी बजट सीलिंग:** लगातार कॉल हैंडलिंग के दौरान RAM **< 150 MB** पर स्थिर रहे।
+- [ ] **6. 24-घंटे DRM लीज सक्रियता:** `drm_guard` की 24h क्रिप्टोग्राफिक लीज सक्रिय हो और ऑफलाइन ग्रेस पीरियड तैयार हो।
+- [ ] **7. टेलीफोनी व नेटवर्क पोर्ट:** WebSocket पोर्ट 3000 खुला हो और Twilio / Exotel मीडिया स्ट्रीम के लिए क्लाउडफ्लेयर टनल / डोमेन कॉन्फ़िगर हो।
+
+---
 
 ### 1. प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
 ```powershell

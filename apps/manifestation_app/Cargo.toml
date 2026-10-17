@@ -1,0 +1,31 @@
+[package]
+name = "manifestation_app"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Core Framework Manifestation Team"]
+description = "Pure Rust Subconscious Mind Reprogramming & Manifestation Super App Engine"
+
+[dependencies]
+# 1. AI Core Framework Engine (Vision, Speech, Audio DSP, Universal Image Generation)
+ai_core = { path = "../../crates/core" }
+
+# 2. Shared 24-Hour Cryptographic DRM & Licensing
+drm_guard = { path = "../../crates/drm_guard" }
+
+# 3. Async Runtime & Networking
+tokio = { version = "1.38", features = ["full"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.6", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# 4. Embedded Web UI (Axum Dashboard & Interactive Meditation Portal)
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.5", features = ["cors"] }
+
+# 5. Image & Audio Buffers
+bytes = "1.6"
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+hound = "3.5"
+base64 = "0.22"

@@ -5,6 +5,7 @@ use cctv_guard::{
     RtspClient, RtspClientConfig, VlmManagerConfig,
 };
 use clap::Parser;
+use drm_guard::{CctvGuardMetrics, DRMGuard};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -62,6 +63,23 @@ async fn main() -> Result<()> {
     println!(" Cooldown Timer:   {:.1}s", args.cooldown_secs);
     println!(" VLM Model Path:   {}", args.vlm_model_path);
     println!(" Evidence Dir:     {:?}", args.evidence_dir);
+
+    // Universal DRM Guard (24-Hour Rotating Lease & Background Jio TV OTA Updater)
+    let drm_metrics = Arc::new(CctvGuardMetrics::new(1));
+    let drm = Arc::new(
+        DRMGuard::builder()
+            .client_id("cctv_guard_edge")
+            .license_key("PEHREDAR-SHAMBHAVI-24H-LEASE")
+            .metrics_provider(drm_metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+    if let Err(e) = drm.perform_heartbeat().await {
+        println!(" [DRM Guard] Initial handshake: {}. Active in offline lease mode.", e);
+    } else {
+        println!(" [DRM Guard] 24-Hour Lease Active. Machine: {}", &drm.machine_uuid()[..16]);
+    }
+    drm.clone().start_background_daemon();
 
     let config = CctvGuardConfig {
         camera_id: args.camera_id.clone(),

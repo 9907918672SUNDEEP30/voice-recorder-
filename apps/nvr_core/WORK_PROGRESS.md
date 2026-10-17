@@ -172,51 +172,115 @@ cd apps/nvr_core/scripts
 npx wrangler deploy licensing_worker.js
 ```
 
-### 📱 1. "TP-Link Router" Style Local Diagnostic & Setup Portal (Embedded Mini-Web)
-*जब ग्राहक के घर या दुकान में कोई मॉनिटर नहीं लगा होगा, तो इंस्टॉलर या ग्राहक अपने मोबाइल/लैपटॉप से उसी वाई-फ़ाई पर कनेक्ट करके सेटअप और डायग्नोस्टिक देख सकेगा (जैसे TP-Link / JioFiber राउटर में होता है):*
-- [ ] **Embedded Lightweight Web Server:** बाइनरी में एक बेहद हल्का HTTP सर्वर (जैसे पोर्ट `8080` या `http://pehredar.local:8080` पर, < 5MB RAM overhead).
-- [ ] **Mobile-Responsive Installer UI:**
-  - **Slot Status Overview:** स्लॉट 1 से 8/16/32 तक कौन सा कैमरा कनेक्टेड है और कौन सा डिस्कनेक्टेड।
-  - **Live Camera Health:** हर कैमरे का लाइव रिज़ॉल्यूशन, FPS, और RTSP स्ट्रीम हेल्थ।
-  - **AI Engine Health:** YOLOv8m मॉडल लोड स्टेटस, डिटेक्शन FPS, और अलर्ट काउंट।
-  - **Storage & Disk Meter:** 128 GB SSD पर कितने दिन की रिकॉर्डिंग सुरक्षित है (FIFO क्लीनर स्टेटस)।
-  - **License & Lease Meter:** 24-घंटे का लीज काउंटडाउन (उदा: `Active: 22h 15m remaining`).
-  - **Quick Camera Setup:** नए कैमरे का IP/RTSP URL डालने या ऑन-स्क्रीन पासवर्ड बदलने की सुविधा।
+### 📱 1. "TP-Link Router" Style Local Diagnostic & Setup Portal (100% COMPLETE)
+- [x] **Embedded Lightweight Web Server (`src/web_portal`):** बाइनरी में पोर्ट `8080` पर प्योर रस्ट Axum सर्वर (`http://localhost:8080`), < 5MB RAM overhead.
+- [x] **Mobile-Responsive 4-Step Quick Setup Wizard:**
+  - [x] **Step 1:** मशीन हार्डवेयर फिंगरप्रिंट लॉक (Motherboard UUID, CPU ID, MAC Address Lock)।
+  - [x] **Step 2:** 24-घंटे क्रिप्टोग्राफिक क्लाउड लीज एक्टिवेशन।
+  - [x] **Step 3:** 8/16 चैनल कैमरा डिस्कवरी व RTSP स्ट्रीम कॉन्फ़िगरेशन।
+  - [x] **Step 4:** एआई संवेदनशीलता, FIFO स्टोरेज व 10-मिनट प्रोएक्टिव वायर-फॉल्ट अलर्टिंग।
+- [x] **Jio TV स्टाइल बैकग्राउंड ऑटो-अपडेटर (OTA Updates):**
+  - [x] बैकग्राउंड में हर घंटे साइलेंटली नए वर्ज़न की जांच और बिना रिकॉर्डिंग रोके एटॉमिक बाइनरी स्वैप (`replace_executable`)।
 
 ---
 
-### ☁️ 2. Cloudflare Worker + Supabase Central Management & Heartbeat
-- [ ] **10-Minute Health Heartbeat (टेलीमेट्री):**
-  - पहरेदार बॉक्स हर 10 मिनट में क्लाउडफ्लेयर वर्कर को एक छोटा 1 KB का पिंग भेजेगा (`{ box_id, ram_mb: 680, cam_offline: [], storage_pct: 18 }`).
-  - **फ़ायदा:** अगर किसी ग्राहक का कोई कैमरा बंद होता है या हार्ड डिस्क में दिक्कत आती है, तो ग्राहक के बोलने से पहले **शांभवी एआई लैब्स एडमिन डैशबोर्ड/WhatsApp** पर अलर्ट आ जाएगा।
-- [ ] **24-Hour Rotating Cryptographic Lease:**
-  - हर 24 घंटे में बॉक्स ऑटोमैटिकली क्लाउडफ्लेयर से नया Ed25519 साइन्ड लीज टोकन लेगा।
-  - ₹1,000/माह या ₹250/कैमरा/माह का पेमेंट चालू रहने पर टोकन तुरंत रीन्यू हो जाएगा।
-  - पेमेंट लैप्स होने पर स्क्रीन पर वार्निंग और AI प्रोटेक्शन लॉक।
+## 🧪 विस्तृत टेस्टिंग गाइड (How to Test & Verify — कैसे टेस्ट करने हैं)
+
+### Level 1: कंपाइलेशन व स्टेटिक एनालिसिस (Static Check)
+```powershell
+# 1. त्वरित कंपाइलेशन जांच (0 त्रुटियां, 0 चेतावनियां सुनिश्चित करें)
+cargo check -p nvr_core
+
+# 2. कोड क्वालिटी व लिंटिंग जांच
+cargo clippy -p nvr_core -- -D warnings
+```
+
+### Level 2: ऑटोमेटेड यूनिट टेस्ट्स (Unit Tests)
+```powershell
+# NVR कोर रिंग बफर और स्टोरेज टेस्ट्स चलाएं
+cargo test -p nvr_core -- --nocapture
+```
+
+### Level 3: एंड-टू-एंड कैमरा सिम्युलेशन व AI डिटेक्शन टेस्ट
+```powershell
+# 4 कैमरों के साथ सिम्युलेटेड मोड में चलाएं
+cargo run -p nvr_core -- --simulate --cameras 4 --port 8080
+```
+- जांचें कि टर्मिनल पर H.264 NAL पैकेट पार्सिंग, रिंग बफर में 45s रोलिंग स्टोरेज, और YOLOv8m डिटेक्शन सुचारू रूप से कार्य कर रहे हैं।
+
+### Level 4: TP-Link स्टाइल एम्बेडेड वेब पोर्टल सत्यापन
+1. ब्राउज़र में खोलें: `http://localhost:8080`
+2. **Setup Wizard:** 4-चरणीय विज़ार्ड का परीक्षण करें (हार्डवेयर UUID, 24h लीज एक्टिवेशन, RTSP कैमरा जोड़ना, और अलर्टिंग)।
+3. **Live Diagnostic:** 8 चैनलों का लाइव स्टेटस, स्टोरेज FIFO यूसेज, और YOLOv8m डिटेक्शन FPS की पुष्टि करें।
+
+### Level 5: 24-Hour DRM लीज व Jio TV OTA अपडेटर टेस्ट
+```powershell
+# 1. 24h लीज स्टेटस API जांच
+Invoke-RestMethod -Uri "http://localhost:8080/api/portal/status" -Method Get | ConvertTo-Json
+
+# 2. OTA अपडेट चेक ट्रिगर करें
+Invoke-RestMethod -Uri "http://localhost:8080/api/portal/ota-check" -Method Post | ConvertTo-Json
+```
 
 ---
 
-### 🏭 3. Turnkey "Gold Master" Appliance Image (Factory Ready)
-- [ ] **Production Binary Stripping:** 
-  - `cargo build --release -p nvr_core` के बाद `strip` चलाकर सिंबल्स हटाना और बाइनरी को अल्ट्रा-फास्ट और रिवर्स-इंजीनियरिंग प्रूफ बनाना।
-- [ ] **1-Click Appliance USB Installer (`setup_appliance.sh`):**
-  - नई 128GB SSD पर Ubuntu Server Minimal के साथ 30 सेकंड में बाइनरी, मॉडल, और सिस्टमड सर्विस सेट करना।
-- [ ] **Motherboard Hardware Sealing:** 
-  - पहले बूट पर बॉक्स के मदरबोर्ड UUID, CPU ID और LAN MAC को परमानेंटली बाइंड करना।
-- [ ] **Watchdog & Power-Cut Auto Recovery:** 
-  - बिजली कटने के बाद वापस आते ही बिना कीबोर्ड या पासवर्ड के 5 सेकंड में सिस्टम ऑटो-बूट और 24/7 रिकॉर्डिंग चालू।
+## 🚀 फाइनल डिप्लॉयमेंट चेकलिस्ट एवं प्रोडक्शन गाइड (Final Deployment Checklist & Procedure)
+
+### 📋 प्री-डिप्लॉयमेंट चेकलिस्ट (क्या-क्या चीजें 100% ओके करके डिप्लॉय करना है):
+- [ ] **1. कोड व वार्निंग्स ऑडिट:** `cargo check --release -p nvr_core` 100% सफल, 0 त्रुटियां, 0 वार्निंग्स।
+- [ ] **2. YOLOv8m मॉडल फ़ाइल सत्यापन:** `C:\AI_Models\yolov8m.onnx` (103.7 MB) या Linux पर `/opt/ai_models/yolov8m.onnx` मौजूद हो।
+- [ ] **3. 2 GB RAM बजट सत्यापन:** 8 कैमरों के साथ कुल RAM उपयोग **< 900 MB** पर स्थिर हो।
+- [ ] **4. 24-घंटे लीज सुरक्षा सक्रियता:** `drm_guard` मशीन बाइंडिंग पूर्ण हो और 24-घंटे का ऑफलाइन ग्रेस टोकन सुरक्षित हो।
+- [ ] **5. स्टोरेज डिस्क व FIFO क्लीनर:** 128 GB SSD पर वीडियो सेगमेंट डायरेक्टरी (`/var/nvr/recordings` या `D:\nvr_recordings`) राइटेबल हो।
+- [ ] **6. नेटवर्क पोर्ट्स:** RTSP पोर्ट्स (554), वेब पोर्टल पोर्ट (8080) खुले हों।
 
 ---
 
-## 🛠️ Verification & Log History
+### 📦 प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
+```powershell
+# 1. प्रोडक्शन ऑप्टिमाइज्ड रिलीज़ बाइनरी बनाएं
+cargo build --release -p nvr_core
 
-| Date | Action | Result | Notes |
-| :--- | :--- | :--- | :--- |
-| **2026-10-16** | Unit tests execution (`cargo test -p nvr_core`) | **PASSED (0.06s)** | 1 passed, 0 failed, ring buffer retention verified. |
-| **2026-10-16** | Clean build check (`cargo check -p nvr_core`) | **PASSED (0.74s)** | 0 errors, 0 warnings across all crates. |
-| **2026-10-16** | Created Linux Systemd Service (`pehredar.service`) | **PASSED** | Hardened with memory ceiling (1500M) for 2GB boxes. |
-| **2026-10-16** | Created Automated Appliance Installer (`setup_appliance.sh`) | **PASSED** | Ubuntu/Debian 1-click deployment script. |
-| **2026-10-16** | Created Cloudflare Worker Script (`licensing_worker.js`) | **PASSED** | 24-hr cryptographic Ed25519 lease engine. |
-| **2026-10-16** | Git Commit (`91ea260`) | **COMMITTED** | `feat(nvr_core): launch Shambhavi AI Labs Pehredar Box with YOLOv8m ONNX, zero-copy storage, and anti-tamper security` (47 files, +3,542 insertions). |
-| **2026-10-16** | Git Push to Remote Origin (`main`) | **PUSHED & SYNCED** | Remote `https://github.com/9907918672SUNDEEP30/voice-recorder-.git` successfully updated (`61b1319..91ea260`). |
-| **2026-10-16** | Updated Roadmap with TP-Link Portal Architecture | **DOCUMENTED** | Embedded Web Dashboard & 10-min Heartbeat added to master roadmap. |
+# 2. बाइनरी पाथ:
+# Windows: target/release/nvr_core.exe
+# Linux:   target/release/nvr_core
+```
+
+---
+
+### 🛡️ 24x7 टर्नकी अप्लायंस डिप्लॉयमेंट (Headless Linux Black Box)
+
+#### A. 1-क्लिक USB इंस्टालर (`setup_appliance.sh`):
+```bash
+sudo chmod +x setup_appliance.sh
+sudo ./setup_appliance.sh
+```
+
+#### B. Linux Systemd Service (`/etc/systemd/system/pehredar.service`):
+```ini
+[Unit]
+Description=Shambhavi AI Labs Pehredar Box NVR Core
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/pehredar
+ExecStart=/opt/pehredar/nvr_core --config /opt/pehredar/nvr_config.json --port 8080
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### C. सर्विस को सक्षम और प्रारंभ करें:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable pehredar.service
+sudo systemctl start pehredar.service
+sudo systemctl status pehredar.service
+```
+

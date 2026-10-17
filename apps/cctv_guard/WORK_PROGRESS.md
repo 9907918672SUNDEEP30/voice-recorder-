@@ -148,29 +148,76 @@ cargo run -p cctv_guard -- --rtsp-url "rtsp://admin:password@192.168.1.100:554/s
 
 ---
 
-## 🚀 फाइनल डिप्लॉयमेंट गाइड (Final Production Deployment)
+## 🧪 विस्तृत टेस्टिंग गाइड (How to Test & Verify — कैसे टेस्ट करने हैं)
 
-### 1. प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
+### Level 1: कंपाइलेशन व स्टेटिक एनालिसिस (Static Check)
+```powershell
+# 1. कंपाइलेशन जांच (0 एरर, 0 वार्निंग्स)
+cargo check -p cctv_guard
+
+# 2. लिंटिंग व कोड क्वालिटी
+cargo clippy -p cctv_guard -- -D warnings
+```
+
+### Level 2: ऑटोमेटेड यूनिट व इंटीग्रेशन टेस्ट्स (6/6 Tests)
+```powershell
+# सभी 6 यूनिट टेस्ट्स चलाएं (SSIM, Hysteresis, Evidence Vault, Downscaling, Robbery Simulation, VLM Manager)
+cargo test -p cctv_guard -- --nocapture
+```
+
+### Level 3: एंड-टू-एंड बैंक रॉबरी व सेंधमारी सिम्युलेशन
+```powershell
+# बिना फिजिकल कैमरे के बैंक शटर सेंधमारी परिदृश्य सिम्युलेट करें
+cargo run -p cctv_guard -- --simulate "NightIntruderShutter" --camera-id "atm_vault_01"
+```
+- जांचें कि Tier-1 मोशन गेटकीपर ट्रिगर होता है, Qwen2-VL 2B विज़न मॉडल ऑन-डिमांड लोड होता है, और `evidence/` फोल्डर में HD स्नैपशॉट + JSON Lines रिकॉर्ड बनता है।
+
+### Level 4: लाइव RTSP कैमरा फीड टेस्टिंग
+```powershell
+# लाइव नेटवर्क IP कैमरा जोड़कर टेस्ट करें
+cargo run -p cctv_guard -- --rtsp-url "rtsp://admin:password@192.168.1.100:554/stream1" --camera-id "cam_main_entrance" --anomaly-thresh 0.04
+```
+
+### Level 5: DRM 24h लीज व टेलीमेट्री टेस्ट
+- जांचें कि मशीन फिंगरप्रिंट लॉक सही है और 24-घंटे का लीज टोकन वैध है।
+
+---
+
+## 🚀 फाइनल डिप्लॉयमेंट चेकलिस्ट एवं प्रोडक्शन गाइड (Final Deployment Checklist & Procedure)
+
+### 📋 प्री-डिप्लॉयमेंट चेकलिस्ट (क्या-क्या चीजें 100% ओके करके डिप्लॉय करना है):
+- [ ] **1. कोड व वार्निंग्स ऑडिट:** `cargo check --release -p cctv_guard` में 0 त्रुटियां व 0 वार्निंग्स।
+- [ ] **2. टेस्ट्स 100% उत्तीर्ण:** सभी 6/6 टेस्ट्स (`tests/guard_tests.rs`) ग्रीन/पास होने चाहिए।
+- [ ] **3. VLM मॉडल फ़ाइल सत्यापन:** `C:\AI_Models\qwen2_vl_2b_int4.onnx` या `C:\AI_Models\qwen2-vl-2b\visionmodel.onnx` डिस्क पर पूर्ण आकार में मौजूद हो।
+- [ ] **4. Tier-1 स्टैंडबाय CPU बजट:** स्टैंडबाय में CPU उपयोग **< 5%** होना चाहिए (Rec.601 integer math)।
+- [ ] **5. एविडेंस स्टोरेज डायरेक्टरी:** `evidence/` फोल्डर राइटेबल हो और पर्याप्त SSD डिस्क स्पेस उपलब्ध हो।
+- [ ] **6. 24-घंटे DRM लीज सक्रियता:** `drm_guard` की 24h क्रिप्टोग्राफिक लीज सक्रिय हो और ऑफलाइन ग्रेस पीरियड तैयार हो।
+- [ ] **7. कैमरा नेटवर्क कनेक्टिविटी:** RTSP कैमरा IP पिंग हो रहा हो और पोर्ट 554 खुला हो।
+
+---
+
+### 📦 प्रोडक्शन रिलीज़ बाइनरी संकलन (Release Build)
 ```powershell
 # रिलीज़ बाइनरी बनाएं
 cargo build --release -p cctv_guard
+
+# उत्पादित बाइनरी पाथ:
+# Windows: target/release/cctv_guard.exe
+# Linux:   target/release/cctv_guard
 ```
-- **उत्पादित बाइनरी:** `target/release/cctv_guard.exe` (Windows) या `target/release/cctv_guard` (Linux).
-- **CPU उपयोग:** Tier-1 स्टैंडबाय अवस्था में < 5% CPU उपयोग.
 
-### 2. मॉडल फ़ाइल सत्यापन (`C:\AI_Models`)
-सुनिश्चित करें कि 4-बिट VLM मॉडल सही पाथ पर स्थित है:
-- फ़ाइल: `C:\AI_Models\qwen2_vl_2b_int4.onnx` या `C:\AI_Models\qwen2-vl-2b\visionmodel.onnx`
-- यदि मॉडल पाथ कस्टम है, तो `--vlm-model-path` फ़्लैग से पाथ पास करें।
+---
 
-### 3. विंडोज टास्क शेड्यूलर / 24x7 ऑटो-बूट सर्विस
-विंडोज पर बिना लॉग-इन 24x7 गार्ड मॉनिटरिंग चालू रखने हेतु:
+### 🛡️ 24x7 ऑटो-स्टार्ट व प्रोडक्शन सर्विस सेटअप
+
+#### A. Windows Task Scheduler (सिस्टम बूट पर ऑटो-स्टार्ट बिना लॉगिन):
 ```powershell
-# Windows Task Scheduler में सिस्टम बूट पर ऑटो-स्टार्ट टास्क बनाएं
-schtasks /create /tn "CctvGuardSentry" /tr "D:\ai_core_framework - Copy (2)\target\release\cctv_guard.exe --rtsp-url rtsp://... --camera-id bank_vault" /sc onstart /ru SYSTEM
+schtasks /create /tn "CctvGuardSentry" `
+  /tr "'D:\ai_core_framework - Copy (2)\target\release\cctv_guard.exe' --rtsp-url 'rtsp://admin:pass@192.168.1.50:554/h264' --camera-id bank_vault" `
+  /sc onstart /ru SYSTEM
 ```
 
-### 4. Linux Systemd हेडलेस एज-डिवाइस डिप्लॉयमेंट
+#### B. Linux Systemd हेडलेस एज-डिवाइस डिप्लॉयमेंट (`/etc/systemd/system/cctv_guard.service`):
 ```ini
 [Unit]
 Description=AI Proactive CCTV Guard Sentry Service
@@ -184,6 +231,7 @@ ExecStart=/opt/cctv_guard/cctv_guard --rtsp-url rtsp://192.168.1.50:554/h264 --c
 Restart=always
 RestartSec=3
 LimitNOFILE=65536
+MemoryMax=900M
 
 [Install]
 WantedBy=multi-user.target

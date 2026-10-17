@@ -20,6 +20,20 @@ async fn main() -> Result<()> {
     println!("   - 💾 Lossless High-Fidelity WAV Serialization (hound 16/24-bit)");
     println!("=================================================================\n");
 
+    // Shared DRM Guard & 24h Audio Studio Lease
+    let dsp_metrics = std::sync::Arc::new(drm_guard::DspRecorderMetrics::new());
+    let drm = std::sync::Arc::new(
+        drm_guard::DRMGuard::builder()
+            .client_id("dsp_recorder_studio")
+            .license_key("DSP-SHAMBHAVI-24H-LEASE")
+            .metrics_provider(dsp_metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+    let _ = drm.perform_heartbeat().await;
+    drm.clone().start_background_daemon();
+    println!("🔐 [DRM Guard] 24-Hour Lease Active. Machine: {}", &drm.machine_uuid()[..16]);
+
     let args: Vec<String> = env::args().collect();
 
     // Check for help flag

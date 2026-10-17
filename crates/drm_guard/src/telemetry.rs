@@ -335,3 +335,56 @@ impl UsageMetricProvider for DspRecorderMetrics {
     }
 }
 
+/// Strongly-typed metrics for the Manifestation Super App (`manifestation_app`)
+#[derive(Clone, Default)]
+pub struct ManifestationMetrics {
+    pub affirmations_spoken: Arc<std::sync::atomic::AtomicU64>,
+    pub vision_boards_created: Arc<std::sync::atomic::AtomicU32>,
+    pub meditation_seconds: Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl ManifestationMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn record_affirmation(&self) {
+        self.affirmations_spoken.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn record_vision_board(&self) {
+        self.vision_boards_created.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn record_meditation(&self, seconds: u64) {
+        self.meditation_seconds.fetch_add(seconds, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+#[async_trait]
+impl UsageMetricProvider for ManifestationMetrics {
+    fn app_name(&self) -> &'static str {
+        "manifestation_app"
+    }
+
+    async fn collect_metrics(&self) -> Map<String, Value> {
+        let mut map = Map::new();
+        map.insert(
+            "affirmations_spoken".to_string(),
+            Value::from(self.affirmations_spoken.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map.insert(
+            "vision_boards_created".to_string(),
+            Value::from(self.vision_boards_created.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map.insert(
+            "meditation_minutes".to_string(),
+            Value::from(
+                (self.meditation_seconds.load(std::sync::atomic::Ordering::Relaxed) as f64 / 60.0).round(),
+            ),
+        );
+        map
+    }
+}
+
+

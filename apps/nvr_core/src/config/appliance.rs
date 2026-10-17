@@ -54,6 +54,10 @@ fn default_lease_interval() -> u64 {
     3_600_000 // 1 hour
 }
 
+fn default_web_port() -> u16 {
+    8080
+}
+
 /// Global appliance configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApplianceConfig {
@@ -61,6 +65,18 @@ pub struct ApplianceConfig {
     pub box_id: String,
     /// Hardware tier
     pub tier: HardwareTier,
+    /// Local HTTP Web Server port for TP-Link style Setup Portal (default: 8080)
+    #[serde(default = "default_web_port")]
+    pub web_port: u16,
+    /// Jio TV style automatic background OTA update enabled (default: true)
+    #[serde(default = "default_true")]
+    pub auto_update_enabled: bool,
+    /// Cloud Client / Tenant ID for licensing
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// 24-Hour Rotating Cryptographic License Key
+    #[serde(default)]
+    pub license_key: Option<String>,
     /// Storage path for continuous 15-min MP4 recordings
     pub storage_dir: PathBuf,
     /// Storage path for locked high-priority evidence
@@ -93,6 +109,10 @@ impl Default for ApplianceConfig {
         Self {
             box_id: "shambhavi_pehredar_box_001".to_string(),
             tier: HardwareTier::Lite,
+            web_port: 8080,
+            auto_update_enabled: true,
+            client_id: Some("demo_client".to_string()),
+            license_key: Some("PEHREDAR-DEMO-LICENSE-24H".to_string()),
             storage_dir: PathBuf::from("./recordings"),
             evidence_dir: PathBuf::from("./evidence"),
             model_path: default_model_path(),

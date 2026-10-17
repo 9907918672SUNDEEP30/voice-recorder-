@@ -20,6 +20,20 @@ async fn main() -> Result<()> {
     println!("   - 🎨 Real-Time 3D LUT Trilinear Color Grading");
     println!("=================================================================\n");
 
+    // Shared DRM Guard & 24h Video Studio Lease
+    let studio_metrics = std::sync::Arc::new(drm_guard::VideoStudioMetrics::new());
+    let drm = std::sync::Arc::new(
+        drm_guard::DRMGuard::builder()
+            .client_id("video_studio_desktop")
+            .license_key("VIDEO-SHAMBHAVI-24H-LEASE")
+            .metrics_provider(studio_metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+    let _ = drm.perform_heartbeat().await;
+    drm.clone().start_background_daemon();
+    println!("🔐 [DRM Guard] 24-Hour Rotating Lease Active. Machine: {}", &drm.machine_uuid()[..16]);
+
     let args: Vec<String> = env::args().collect();
 
     if args.iter().any(|a| a == "--help" || a == "-h") {

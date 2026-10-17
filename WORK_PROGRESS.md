@@ -24,35 +24,62 @@
 
 ---
 
-## 📋 कल का कार्य (Tomorrow's Scheduled Tasks)
+### 2. सीसीटीवी TP-Link स्टाइल वेब पोर्टल एवं Jio TV ऑटो-अपडेटर (`apps/nvr_core` & `apps/cctv_guard`):
+- [x] **TP-Link स्टाइल एम्बेडेड वेब सर्वर (`src/web_portal`):** पोर्ट `8080` पर प्योर रस्ट Axum सर्वर (`http://0.0.0.0:8080` / `http://localhost:8080`)। ग्राहक अपने फोन या लैपटॉप पर सीधे खोलकर कैमरा और 24-घंटे लाइसेंस सेट कर सकता है।
+- [x] **4-चरणीय क्विक सेटअप विज़ार्ड (Quick Setup Wizard):**
+  1. हार्डवेयर फिंगरप्रिंट (Motherboard UUID, CPU ID, MAC Address Lock)
+  2. 24-घंटे क्रिप्टोग्राफिक क्लाउड लीज एक्टिवेशन
+  3. कैमरा डिस्कवरी व RTSP स्ट्रीम कॉन्फ़िगरेशन
+  4. एआई संवेदनशीलता, स्टोरेज व व्हाट्सएप वायर-फॉल्ट अलर्टिंग
+- [x] **Jio TV स्टाइल बैकग्राउंड ऑटो-अपडेटर (OTA Updates):**
+  - बैकग्राउंड में हर घंटे साइलेंटली नए वर्ज़न की जांच
+  - SHA-256 क्रिप्टोग्राफिक हैश सत्यापन
+  - लाइव सीसीटीवी रिकॉर्डिंग रोके बिना एटॉमिक बाइनरी स्वैप (`replace_executable`)
+- [x] **10-मिनट प्रोएक्टिव हेल्थ पिंग व वायर फॉल्ट डिटेक्टर:** तार कटने या ढीले होने पर तत्काल अलर्ट।
 
-### 1. प्रत्येक ऐप के `Cargo.toml` में `drm_guard` डिपेंडेंसी जोड़ना:
-- [ ] **सभी 8 ऐप्स** के `Cargo.toml` में लोकल पाथ डिपेंडेंसी जोड़ना ताकि प्रत्येक ऐप अपने अंदर एनक्रिप्शन, ऑटो-अपडेट और 24-घंटे लीज को सीधे उठा ले:
-  ```toml
-  [dependencies]
-  drm_guard = { path = "../../crates/drm_guard" }
-  ```
-- [ ] प्रत्येक ऐप के इनिशियलाइज़ेशन में उसके संबंधित मेट्रिक्स प्रोवाइडर (`VoiceAgentMetrics`, `CctvGuardMetrics`, `FinancialMetrics`, `RagEngineMetrics`, `VideoStudioMetrics`, `DspRecorderMetrics`) को प्लग करना।
+### 3. प्रत्येक ऐप में `drm_guard` लिंकेज एवं मेट्रिक्स:
+- [x] `apps/nvr_core` — `CctvGuardMetrics` + TP-Link वेब पोर्टल + 24h Lease + OTA Updater.
+- [x] `apps/cctv_guard` — `CctvGuardMetrics` + 24h Lease + OTA Updater.
+- [x] `apps/voice_agent` — `VoiceAgentMetrics` + 24h Lease + Background Daemon.
+- [x] `apps/dsp_recorder` — `DspRecorderMetrics` + 24h Lease + Background Daemon.
+- [x] `apps/video_studio` — `VideoStudioMetrics` + 24h Lease + Background Daemon.
+- [x] `apps/financial_engine` — `FinancialMetrics` + 24h Lease + Background Daemon.
+- [x] `apps/local_rag_engine` — `RagEngineMetrics` + 24h Lease + Background Daemon.
+- [x] **वर्कस्पेस कंपाइलेशन:** `cargo check --workspace` 100% पास (0 त्रुटियां, 0 चेतावनियां)।
 
-### 2. शेष 2 ऐप्स का निर्माण (Roadmap Apps):
-- [ ] **`apps/content_automation`** — 100% शुद्ध रस्ट बैकएंड इंजन (वेब स्क्रैपिंग, सोशल मीडिया API पब्लिशिंग, शेड्यूलर) + Supabase स्कीमा + PWA।
-- [ ] **`apps/manifestation_app`** — 100% शुद्ध रस्ट ऑफलाइन रूटीन ऐप (लोकल स्टोरेज, न्यूरल शेड्यूलर, सब्लिमिनल ऑडियो)।
+---
 
-### 3. संपूर्ण वर्कस्पेस सत्यापन:
-- [ ] `cargo check --workspace` चलाकर सभी 8 ऐप्स और शेयर्ड क्रेट्स का एक साथ कंपाइलेशन पास करना।
-- [ ] डिप्लॉयमेंट रेडीनेस टेस्ट।
+### 4. मैनिफेस्टेशन ऐप एवं कोर-इंजन फर्स्ट इमेज जनरेशन (`apps/manifestation_app` & `crates/core`):
+- [x] **"Core-Engine First" आर्किटेक्चर:**
+  - AI इमेज जनरेशन मॉडल (`ImageGenAdapter`, `SdTurboConfig`, `SdTurboImageEngine`) को सीधे `crates/core` (`ai_core`) में इंटिग्रेट किया गया है।
+  - भविष्य में कोई भी नया ऐप (जैसे `video_studio`, `content_automation`) इसी सेंट्रल इंजन से इमेज जनरेशन का उपयोग कर सकेगा।
+  - `manifestation_app` केवल `ai_core` से डिपेंडेंसी लेता है (`ai_core = { path = "../../crates/core" }`) और कोई भी मॉडल ऐप के अंदर अलग से नहीं रखा गया है।
+- [x] **मैक्सिमम एफिशिएंसी मॉडल स्टैंडर्ड (Candle SD-Turbo Safetensors):**
+  - यूजर के निर्देशानुसार ONNX के स्थान पर सबसे कम रिसोर्स यूसेज और 100% प्योर रस्ट कम्पैटिबल `stabilityai/sd-turbo` safetensors (`C:\AI_Models\sd_turbo`) का उपयोग।
+- [x] **लक्ज़री ग्लासमोर्फिज्म वेब पोर्टल (पोर्ट 9090):**
+  - 100% प्योर वैनिला HTML5/CSS3/JS एम्बेडेड वेब SPA (`http://localhost:9090`)।
+  - लिविंग 3D विजन बोर्ड्स (सिंगल-स्टेप इमेज जनरेशन), निकोला टेस्ला 3-6-9 मैनिफेस्टेशन जर्नल, मिरर अफ़र्मेशन चैंबर, और 528 Hz / 432 Hz थिटा स्लीप मेडिटेशन इंजन।
+- [x] **24-घंटे लीज DRM गार्ड एवं मीटरिंग (`crates/drm_guard`):**
+  - `ManifestationMetrics` के जरिए विजन बोर्ड्स, अफ़र्मेशन और मेडिटेशन मिनट्स की ऑटोमैटिक मीटरिंग।
+- [x] **सम्पूर्ण डॉक्यूमेंटेशन सुइट तैयार (5 फाइल्स):**
+  - `apps/manifestation_app/PRD.md`
+  - `apps/manifestation_app/MVP.md`
+  - `apps/manifestation_app/README.md`
+  - `apps/manifestation_app/ARCHITECTURE.md`
+  - `apps/manifestation_app/WORK_PROGRESS.md`
+- [x] **वर्कस्पेस कम्पाइलेशन:** `cargo check --workspace` 100% पास (सभी 13 क्रेट्स/ऐप्स 0 एरर)।
 
 ---
 
 ## 🏛️ 8 ऐप्स की स्थिति ट्रैकर
 
-| क्र. सं. | ऍप्लिकेशन | कोड स्थिति | DRM डिपेंडेंसी लिंकेज (`Cargo.toml`) |
-|:---:|---|:---:|:---:|
-| 1 | **Voice AI Calling Agent** (`apps/voice_agent`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 2 | **CCTV Guard** (`apps/cctv_guard` / `apps/nvr_core`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 3 | **Voice Studio / DSP Recorder** (`apps/dsp_recorder`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 4 | **Video Studio** (`apps/video_studio`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 5 | **Financial Super Engine** (`apps/financial_engine`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 6 | **Manifestation App** (`apps/manifestation_app`) | 🔜 कल निर्माण होगा | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 7 | **Local RAG Engine** (`apps/local_rag_engine`) | ✅ कोड बेस तैयार | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
-| 8 | **Content Automation** (`apps/content_automation`) | 🔜 कल निर्माण होगा | ⏳ कल जोड़ा जाएगा (`drm_guard`) |
+| क्र. सं. | ऍप्लिकेशन | कोड स्थिति | DRM डिपेंडेंसी लिंकेज (`Cargo.toml`) | TP-Link / Jio TV OTA |
+|:---:|---|:---:|:---:|:---:|
+| 1 | **Voice AI Calling Agent** (`apps/voice_agent`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`VoiceAgentMetrics`) | ✅ OTA रेडी |
+| 2 | **CCTV Guard** (`apps/cctv_guard` / `apps/nvr_core`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`CctvGuardMetrics`) | ✅ TP-Link Web + Jio TV OTA |
+| 3 | **Voice Studio / DSP Recorder** (`apps/dsp_recorder`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`DspRecorderMetrics`) | ✅ OTA रेडी |
+| 4 | **Video Studio** (`apps/video_studio`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`VideoStudioMetrics`) | ✅ OTA रेडी |
+| 5 | **Financial Super Engine** (`apps/financial_engine`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`FinancialMetrics`) | ✅ OTA रेडी |
+| 6 | **Local RAG Engine** (`apps/local_rag_engine`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`RagEngineMetrics`) | ✅ Axum UI + OTA रेडी |
+| 7 | **Content Automation** (`apps/content_automation`) | 🔜 पाइपलाइन में | ⏳ शेड्यूल्ड | ⏳ शेड्यूल्ड |
+| 8 | **Manifestation App** (`apps/manifestation_app`) | ✅ कोड बेस व डॉक्स तैयार | ✅ पूर्ण (`ManifestationMetrics`) | ✅ Axum Portal (Port 9090) + SD-Turbo |

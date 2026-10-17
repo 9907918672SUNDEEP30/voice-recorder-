@@ -11,6 +11,7 @@ pub mod ingestion;
 pub mod security;
 pub mod sentinel;
 pub mod storage;
+pub mod web_portal;
 
 use actuator::{AlertNotifier, EvidencePackager, HardwareRelayController};
 use ai::PluggableAiEngine;
@@ -18,12 +19,15 @@ use anyhow::Result;
 use clap::Parser;
 use config::NvrConfig;
 use display::{DisplayGridCompositor, HdmiDisplayWindow, HudRenderer};
+use drm_guard::{CctvGuardMetrics, DRMGuard};
 use ingestion::{SimulatedCameraFeed, SimulationScenario};
 use security::{HardwareFingerprint, LeaseGuardian};
 use sentinel::{GatekeeperDecision, SentinelGatekeeper};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use storage::{CameraRingBuffer, RollingSegmentWriter, StorageCleaner};
+use tokio::sync::RwLock;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Shambhavi AI Labs Pehredar Box NVR Engine", long_about = None)]
@@ -106,6 +110,37 @@ async fn main() -> Result<()> {
     let model_path = args.model_path.unwrap_or_else(|| config.appliance.model_path.clone());
     let model_path_str = model_path.to_string_lossy().to_string();
     println!("🧠 Vision Model Path:    {}", model_path_str);
+
+    // 3.5. Universal DRM Guard & Metered Licensing Integration
+    let metrics = Arc::new(CctvGuardMetrics::new(config.cameras.len() as u32));
+    let client_id = config.appliance.client_id.clone().unwrap_or_else(|| "retail_store_patna_01".to_string());
+    let license_key = config.appliance.license_key.clone().unwrap_or_else(|| "PEHREDAR-SHAMBHAVI-24H-LEASE".to_string());
+
+    let drm = Arc::new(
+        DRMGuard::builder()
+            .client_id(client_id)
+            .license_key(license_key)
+            .heartbeat_url(Some(config.appliance.cloud_lease_endpoint.clone()))
+            .metrics_provider(metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+
+    // Trigger initial lease validation
+    if let Err(e) = drm.perform_heartbeat().await {
+        println!(" [DRM NOTICE] Initial Cloudflare handshake: {}. Active under offline lease.", e);
+    } else {
+        println!(" [DRM SUCCESS] 24-Hour Cryptographic Lease Verified & Active.");
+    }
+
+    // Launch background 10-minute proactive health monitoring daemon
+    drm.clone().start_background_daemon();
+
+    // 3.6. Launch TP-Link Style Embedded Web Admin & Setup Portal
+    let web_port = config.appliance.web_port;
+    let config_lock = Arc::new(RwLock::new(config.clone()));
+    web_portal::start_web_portal(config_lock, drm.clone(), metrics.clone(), web_port).await?;
+
     println!("============================================================\n");
 
     // 4. Initialize Core Subsystems

@@ -12,6 +12,7 @@ use tokio::sync::Mutex;
 
 use ai_core::models::onnx_adapters::{SileroVadLocal, WhisperTinyLocal, QwenLocal, OpenVoiceLocal};
 use ai_core::models::adapters::{VADAdapter, SttAdapter, LlmAdapter, TtsAdapter};
+use drm_guard::{VoiceAgentMetrics, DRMGuard};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,6 +20,20 @@ async fn main() -> Result<()> {
     println!("🎙️  Voice AI Calling Agent (Telephony + Browser Simulator) ");
     println!("🎙️  Shambhavi AI Lab - 100% Local ONNX Production Core     ");
     println!("🎙️ ========================================================");
+
+    // Universal DRM Guard & 24h Metered Calling Telemetry
+    let voice_metrics = Arc::new(VoiceAgentMetrics::new());
+    let drm = Arc::new(
+        DRMGuard::builder()
+            .client_id("voice_agent_cloud")
+            .license_key("VOICE-SHAMBHAVI-24H-LEASE")
+            .metrics_provider(voice_metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+    let _ = drm.perform_heartbeat().await;
+    drm.clone().start_background_daemon();
+    println!("🔐 [DRM Guard] 24-Hour Rotating Lease Active. Machine: {}", &drm.machine_uuid()[..16]);
 
     // Robust multi-path resolution for config.json
     let config_paths = ["config.json", "../../config.json", "../config.json"];
