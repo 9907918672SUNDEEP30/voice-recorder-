@@ -718,6 +718,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "content_engine"
+version = "0.1.0"
+dependencies = [
+ "ai_core",
+ "anyhow",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "clap",
+ "dotenvy",
+ "drm_guard",
+ "hound",
+ "image 0.24.9",
+ "ndarray 0.15.6",
+ "quick-xml",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "tokio",
+ "video_studio",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1148,6 +1171,12 @@ checksum = "ab8ecd87370524b461f8557c119c405552c396ed91fc0a8eec68679eab26f94a"
 dependencies = [
  "libloading",
 ]
+
+[[package]]
+name = "dotenvy"
+version = "0.15.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "downcast-rs"
@@ -3191,6 +3220,15 @@ name = "pxfm"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
+
+[[package]]
+name = "quick-xml"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7649a7b4df05aed9ea7ec6f628c67c9953a43869b8bc50929569b2999d443fe"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "quinn"
