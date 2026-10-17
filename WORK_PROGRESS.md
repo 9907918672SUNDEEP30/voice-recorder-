@@ -84,3 +84,11 @@
 | 6 | **Local RAG Engine** (`apps/local_rag_engine`) | ✅ कोड बेस तैयार | ✅ पूर्ण (`RagEngineMetrics`) | ✅ Axum UI + OTA रेडी |
 | 7 | **Content Automation** (`apps/content_automation`) | 🔜 पाइपलाइन में | ⏳ शेड्यूल्ड | ⏳ शेड्यूल्ड |
 | 8 | **Manifestation App** (`apps/manifestation_app`) | ✅ कोड बेस व डॉक्स तैयार | ✅ पूर्ण (`ManifestationMetrics`) | ✅ Axum Portal (Port 9090) + SD-Turbo |
+
+---
+
+## 📋 आगामी नियोजित कार्य (Upcoming Scheduled Tasks — बाद में किया जाएगा, अभी शुरू नहीं करना है)
+- [ ] **प्रत्येक ऐप का समर्पित `DEPLOYMENT.md` फ़ाइल निर्माण:**
+  - *सख्त निर्देश (Strict Rule):* यह कार्य आगामी चरण में किया जाएगा। अभी केवल नोट किया गया है, इसे अभी शुरू नहीं करना है।
+  - प्रत्येक ऐप (`apps/voice_agent`, `apps/cctv_guard`, `apps/nvr_core`, `apps/dsp_recorder`, `apps/video_studio`, `apps/financial_engine`, `apps/local_rag_engine`, `apps/content_automation`) में उसका अपना अलग, समर्पित `DEPLOYMENT.md` बनाया जाएगा (जैसा `apps/manifestation_app/DEPLOYMENT.md` में बनाया गया है)।
+

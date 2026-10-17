@@ -87,3 +87,11 @@ test test_verify_all_models_zero_mock ... ok
 1. **फैक्ट्री 100% न्यूट्रल है:** कोर फ्रेमवर्क में किसी भी ऐप का कोई हार्डकोडेड नियम नहीं है।
 2. **भविष्य के सभी ऐप्स (`voice_agent`, `cctv_guard`, `financial_screener`, `manifestation_app`, `youtube_automation`) अब सीधे `crates/core` की लाइब्रेरी को कॉल करेंगे।
 3. **`crates/core` अब हमेशा के लिए फ्रीज है — इसमें आगे किसी बदलाव की आवश्यकता नहीं है।**
+
+---
+
+## 📋 5. आगामी नियोजित कार्य (Upcoming Scheduled Tasks — बाद में किया जाएगा, अभी शुरू नहीं करना है)
+- [ ] **प्रत्येक ऐप का समर्पित `DEPLOYMENT.md` फ़ाइल निर्माण:**
+  - *सख्त निर्देश (Strict Rule):* यह कार्य आगामी चरण में किया जाएगा। अभी केवल नोट किया गया है, इसे अभी शुरू नहीं करना है।
+  - प्रत्येक ऐप (`apps/voice_agent`, `apps/cctv_guard`, `apps/nvr_core`, `apps/dsp_recorder`, `apps/video_studio`, `apps/financial_engine`, `apps/local_rag_engine`, `apps/content_automation`) में उसका अपना अलग, समर्पित `DEPLOYMENT.md` बनाया जाएगा (जैसा `apps/manifestation_app/DEPLOYMENT.md` में बनाया गया है)।
+
