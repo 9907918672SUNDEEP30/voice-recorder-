@@ -10,6 +10,7 @@ members = [
     "apps/nvr_core",
     "apps/video_studio",
     "apps/voice_agent",
+    "apps/content_engine",
     "crates/core",
     "crates/core_engine",
     "crates/drm_guard",

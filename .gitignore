@@ -30,3 +30,12 @@ recordings/
 *.db
 *.db-shm
 *.db-wal
+
+# Environment secrets — NEVER push real .env
+.env
+secrets/
+
+# Generated media outputs (large files)
+output/omnichannel_content/*.wav
+output/omnichannel_content/*.mp4
+output/

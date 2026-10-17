@@ -387,4 +387,64 @@ impl UsageMetricProvider for ManifestationMetrics {
     }
 }
 
+/// Strongly-typed metrics for the Universal Content & Media Engine (`content_engine`)
+#[derive(Clone, Default)]
+pub struct ContentEngineMetrics {
+    pub campaigns_executed: Arc<std::sync::atomic::AtomicU64>,
+    pub videos_rendered: Arc<std::sync::atomic::AtomicU64>,
+    pub articles_published: Arc<std::sync::atomic::AtomicU64>,
+    pub cloud_gpu_seconds: Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl ContentEngineMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn record_campaign(&self) {
+        self.campaigns_executed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn record_video(&self) {
+        self.videos_rendered.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn record_article(&self) {
+        self.articles_published.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn record_cloud_seconds(&self, seconds: u64) {
+        self.cloud_gpu_seconds.fetch_add(seconds, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+#[async_trait]
+impl UsageMetricProvider for ContentEngineMetrics {
+    fn app_name(&self) -> &'static str {
+        "content_engine"
+    }
+
+    async fn collect_metrics(&self) -> Map<String, Value> {
+        let mut map = Map::new();
+        map.insert(
+            "campaigns_executed".to_string(),
+            Value::from(self.campaigns_executed.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map.insert(
+            "videos_rendered".to_string(),
+            Value::from(self.videos_rendered.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map.insert(
+            "articles_published".to_string(),
+            Value::from(self.articles_published.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map.insert(
+            "cloud_gpu_seconds".to_string(),
+            Value::from(self.cloud_gpu_seconds.load(std::sync::atomic::Ordering::Relaxed)),
+        );
+        map
+    }
+}
+
+
 
