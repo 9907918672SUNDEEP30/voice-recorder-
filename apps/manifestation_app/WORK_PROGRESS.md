@@ -84,12 +84,13 @@
 
 ---
 
-### 📍 Milestone 5: SD-Turbo Candle Safetensors Weight Download (IN PROGRESS ~58%)
-- [x] `vae/diffusion_pytorch_model.safetensors` (319 MB) — **100% Complete**.
-- [x] `tokenizer/` (`vocab.json`, `merges.txt`, `tokenizer_config.json`) — **100% Complete**.
+### 📍 Milestone 5: SD-Turbo Candle Safetensors Weight Download (100% COMPLETE)
+- [x] `vae/diffusion_pytorch_model.safetensors` (334 MB) — **100% Complete**.
+- [x] `tokenizer/` (`vocab.json`, `merges.txt`, `tokenizer_config.json`, `special_tokens_map.json`) — **100% Complete**.
 - [x] `scheduler/` (`scheduler_config.json`) — **100% Complete**.
 - [x] `text_encoder/model.safetensors` (1.36 GB) — **100% Complete**.
-- [ ] `unet/diffusion_pytorch_model.safetensors` (3.22 GB) — **In Progress (~1.85 GB / 3.22 GB downloaded)**.
+- [x] `unet/diffusion_pytorch_model.safetensors` (3.46 GB) — **100% Complete (3,463,726,504 bytes verified on disk)**.
+- [x] `model_index.json` — **100% Complete**.
 
 ---
 
