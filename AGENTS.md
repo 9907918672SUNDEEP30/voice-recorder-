@@ -19,3 +19,18 @@
 
 4. **DRM & LICENSING PRESERVATION:**
    - All 8 apps must preserve the `crates/drm_guard` integration (24-hour rotating cryptographic lease + 10-minute heartbeat ping + `ZeroizeOnDrop` memory zeroization + Jio-TV style silent OTA atomic updater).
+
+---
+
+### 💎 5. MANDATORY ENTERPRISE PRODUCTION QUALITY MANDATE (ZERO DUMMY POLICY):
+
+- **NEVER WRITE DUMMY, PROTOTYPE, OR SHORTCUT CODE:**
+  - Absolutely **ZERO** placeholder functions, fake random generators, mock tensor returns, dummy model inference, or crude pixel-counting heuristics.
+  - If an AI model or DSP algorithm is specified, it must execute authentic tensor operations (e.g. Qwen2-VL 2D patch extraction `[N, 1176]`, 80-channel Hann + Real DFT + Mel filterbanks) or return a typed, handled error.
+- **DEPLOYMENT-GRADE STANDARD (Google / Microsoft / Adobe Tier):**
+  - All code must be built for final enterprise production deployment.
+  - Every line must withstand rigorous line-by-line audits by top-tier models (Claude Opus 5, ChatGPT-6, Grok 4.2) and Principal Systems Architects with **ZERO shortcuts or flaws found**.
+- **FAIL-CLOSED CRYPTOGRAPHIC RIGOR:**
+  - Never fail-open. Enforce Ed25519 root signatures, AES-256-GCM encryption, monotonic anti-rollback clocks, and `ZeroizeOnDrop` volatile memory scrubbing.
+- **MATHEMATICAL & FINANCIAL DETERMINISM:**
+  - All financial ratios, S-Curve TAM forecasts, and multiple expansion re-rating models must follow institutional CFA/SEBI standards with zero fake multipliers.
