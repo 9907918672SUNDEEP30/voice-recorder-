@@ -13,6 +13,7 @@ impl GazeIntegrator {
             correction_strength: strength,
             vertical_lift_ratio: 0.35,
             horizontal_align_ratio: 0.05,
+            downward_pitch_deg: 12.0,
         };
 
         Self {

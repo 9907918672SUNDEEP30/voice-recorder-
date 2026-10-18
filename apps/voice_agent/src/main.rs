@@ -3,6 +3,7 @@ mod pipeline;
 mod telephony;
 mod prompts;
 mod supabase;
+mod telecom;
 
 use anyhow::Result;
 use std::fs;

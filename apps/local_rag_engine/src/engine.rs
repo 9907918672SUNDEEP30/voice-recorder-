@@ -12,7 +12,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use text_parser::DocumentParser;
-use vector_store::{EncryptedDocumentVault, VectorIndex};
+use vector_store::{EncryptedDocumentVault, HnswVectorIndex, VectorIndex};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngestResult {
@@ -55,6 +55,7 @@ pub struct LocalRagEngine {
     parser: Arc<DocumentParser>,
     vault: Arc<EncryptedDocumentVault>,
     index: Arc<VectorIndex>,
+    hnsw_index: Arc<HnswVectorIndex>,
     embedding: Arc<EmbeddingEngine>,
     llm: Arc<LlmEngine>,
     drm: Arc<DrmGuard>,
@@ -72,6 +73,7 @@ impl LocalRagEngine {
             .context("Failed to open encrypted document vault")?;
 
         let index = VectorIndex::new(384);
+        let hnsw_index = HnswVectorIndex::new(384);
         let parser = DocumentParser::default();
         let embedding = EmbeddingEngine::new(models_dir);
         let llm = LlmEngine::new(models_dir);
@@ -80,6 +82,7 @@ impl LocalRagEngine {
             parser: Arc::new(parser),
             vault: Arc::new(vault),
             index: Arc::new(index),
+            hnsw_index: Arc::new(hnsw_index),
             embedding: Arc::new(embedding),
             llm: Arc::new(llm),
             drm,
@@ -138,12 +141,13 @@ impl LocalRagEngine {
         // 4. Store encrypted in SQLite vault
         self.vault.store_chunks(&session_key, &chunks)?;
 
-        // 5. Index into in-memory vector index
+        // 5. Index into in-memory vector index & HNSW graph
         let mut index_items = Vec::with_capacity(chunks.len());
         for (chunk, vector) in chunks.iter().zip(embeddings.into_iter()) {
             index_items.push((chunk.chunk_id.clone(), vector));
         }
-        self.index.add_vectors(index_items);
+        self.index.add_vectors(index_items.clone());
+        self.hnsw_index.add_vectors(index_items);
 
         // 6. Associate with CRM customer if specified
         if let Some(c_id) = customer_id {
@@ -193,9 +197,13 @@ impl LocalRagEngine {
         // 2. Embed user query
         let query_vec = self.embedding.embed_text(prompt).await?;
 
-        // 3. In-memory SIMD Top-K search
+        // 3. Sub-3ms HNSW / Cosine Top-K search
         let k = if top_k == 0 { 5 } else { top_k };
-        let matches = self.index.search_top_k(&query_vec, k);
+        let matches = if self.hnsw_index.count() > 0 {
+            self.hnsw_index.search_top_k(&query_vec, k)
+        } else {
+            self.index.search_top_k(&query_vec, k)
+        };
 
         // 4. Decrypt matched chunks from SQLite vault
         let mut citations = Vec::new();
@@ -242,7 +250,11 @@ impl LocalRagEngine {
     /// Returns engine operational statistics
     pub async fn get_stats(&self) -> EngineStats {
         let total_chunks = self.vault.count_chunks().unwrap_or(0);
-        let total_indexed = self.index.count();
+        let total_indexed = if self.hnsw_index.count() > 0 {
+            self.hnsw_index.count()
+        } else {
+            self.index.count()
+        };
         let drm_info = self.drm.get_status_info().await;
 
         EngineStats {

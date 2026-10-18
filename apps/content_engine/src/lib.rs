@@ -11,6 +11,7 @@ pub mod config;
 pub mod generator;
 pub mod pipeline;
 pub mod recon;
+pub mod render;
 
 pub use assembly::{GazeIntegrator, LocalCompositor, LutIntegrator};
 pub use audio::{SubtitleEngine, TtsVoiceEngine, WordTimestamp};
@@ -19,3 +20,4 @@ pub use config::{CdpConfig, ContentEngineConfig, ExecutionEnv, LightningCloudCon
 pub use generator::{OmnichannelGenerator, OmnichannelPackage, PromptEngine, ShortVideoScript};
 pub use pipeline::ContentEngineOrchestrator;
 pub use recon::{CompetitorVideo, DossierBuilder, NewsArticle, TrendDossier, TrendReconEngine};
+pub use render::{FfmpegDiagnosticError, FfmpegInfo, FfmpegProbe, HardwareEncoder};

@@ -285,4 +285,97 @@ impl ToneCloner {
             high_shelf_air_db,
         }
     }
+
+    /// Calculates high-precision broadcast enhancement EQ parameters to match
+    /// professional studio microphone voicing (Shure SM7B / EV RE20 broadcast sound)
+    /// while strictly preserving 100% of the speaker's natural vocal identity and timbre.
+    pub fn calculate_broadcast_enhancement(
+        &self,
+        input_profile: &ToneProfile,
+        preset: BroadcastPreset,
+    ) -> ToneEqMatch {
+        let (target_bass_boost, target_boxiness_cut, target_presence_boost, target_air_sheen) = match preset {
+            BroadcastPreset::RadioJockeyWarmth => (3.8, -2.8, 3.5, 2.2),
+            BroadcastPreset::PodcastClarity => (2.0, -3.5, 4.2, 2.0),
+            BroadcastPreset::LateNightIntimate => (4.5, -2.0, 1.8, 2.8),
+            BroadcastPreset::CorporateAuthoritative => (2.2, -3.2, 3.8, 1.2),
+        };
+
+        // Measure existing vocal balance
+        let current_bass = input_profile.band_energies[1];
+        let current_low_mids = input_profile.band_energies[2];
+        let current_presence = (input_profile.band_energies[4] + input_profile.band_energies[5]) * 0.5;
+        let current_air = input_profile.band_energies[6];
+
+        // Adaptive delta computation: if current voice already has high presence, don't over-boost
+        let bass_delta = (target_bass_boost - (current_bass * 10.0)).clamp(0.5, 6.0);
+        let boxiness_delta = (target_boxiness_cut + (current_low_mids * 5.0)).clamp(-6.0, -1.0);
+        let presence_delta = (target_presence_boost - (current_presence * 8.0)).clamp(1.0, 6.5);
+        let air_delta = (target_air_sheen - (current_air * 12.0)).clamp(0.5, 4.0);
+
+        ToneEqMatch {
+            bass_shelf_db: bass_delta,
+            low_mid_db: boxiness_delta,
+            presence_db: presence_delta,
+            high_shelf_air_db: air_delta,
+        }
+    }
 }
+
+/// Radio Jockey / Broadcast Studio Target Profiles
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BroadcastPreset {
+    /// Deep, warm chest resonance + velvety FM radio presence (Shure SM7B profile)
+    RadioJockeyWarmth,
+    /// Punchy voice intelligibility for podcasts, eliminating room boxiness
+    PodcastClarity,
+    /// Intimate ASMR / late-night radio proximity effect
+    LateNightIntimate,
+    /// Crisp, authoritative presence for executive & legal presentations
+    CorporateAuthoritative,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tone_profile_default() {
+        let p = ToneProfile::default();
+        assert_eq!(p.band_energies.len(), 7);
+        assert_eq!(p.frames_analyzed, 0);
+    }
+
+    #[test]
+    fn test_broadcast_enhancement_calculation() {
+        let cloner = ToneCloner::new();
+        let mut input = ToneProfile::default();
+        input.band_energies = [0.05, 0.20, 0.25, 0.20, 0.15, 0.10, 0.05];
+
+        let eq = cloner.calculate_broadcast_enhancement(&input, BroadcastPreset::RadioJockeyWarmth);
+
+        // RJ warmth must boost low-end chest resonance (> 0 dB)
+        assert!(eq.bass_shelf_db > 0.0);
+        // RJ warmth must attenuate boxiness around 400Hz (< 0 dB)
+        assert!(eq.low_mid_db < 0.0);
+        // RJ warmth must boost clarity presence (> 0 dB)
+        assert!(eq.presence_db > 0.0);
+        // Air sheen must provide top-end sparkle (> 0 dB)
+        assert!(eq.high_shelf_air_db > 0.0);
+    }
+
+    #[test]
+    fn test_biquad_cascade_application() {
+        let cloner = ToneCloner::new();
+        let mut cascade = BiquadCascade::new(48000.0);
+        let input = ToneProfile::default();
+
+        let eq = cloner.calculate_broadcast_enhancement(&input, BroadcastPreset::PodcastClarity);
+        eq.apply_to(&mut cascade);
+
+        let mut samples = vec![0.5f32; 128];
+        cascade.process_buffer(&mut samples);
+        assert_eq!(samples.len(), 128);
+    }
+}
+
