@@ -59,7 +59,7 @@ impl PdfFilingParser {
             r"(?i)(?:capacity\s+expansion|greenfield|brownfield|commercial\s+production|new\s+manufacturing\s+facility|debottlenecking)[^\.\n]{1,150}",
         )?;
         let pledge_regex = Regex::new(
-            r"(?i)(?:pledged|encumbered|encumbrance|revocation\s+of\s+pledge)\s+(?:shares|promoter|equity)[^\.\n]{1,120}",
+            r"(?i)(?:pledged|encumbered|encumbrance|revocation\s+of\s+pledge)\s+(?:shares|promoter|equity)[^\r\n]{1,120}",
         )?;
 
         Ok(Self {
@@ -113,7 +113,18 @@ impl PdfFilingParser {
         }
 
         for cap in self.pledge_regex.find_iter(text) {
-            promoter_pledge_disclosures.push(cap.as_str().trim().to_string());
+            let matched_text = cap.as_str().trim();
+            let lower = matched_text.to_lowercase();
+            // Disclosures stating 0.0%, 0%, nil, zero, or none mean ZERO encumbrance, which is safe
+            let is_zero_pledge = lower.contains("0.0%")
+                || lower.contains("0%")
+                || lower.contains("nil")
+                || lower.contains("zero")
+                || lower.contains("none")
+                || lower.contains("no pledge");
+            if !is_zero_pledge {
+                promoter_pledge_disclosures.push(matched_text.to_string());
+            }
         }
 
         // Aggregate unique candidate sentences for semantic reranking
@@ -198,6 +209,14 @@ mod tests {
         assert_eq!(metrics.capex_disclosures.len(), 1);
         assert_eq!(metrics.order_book_disclosures.len(), 1);
         assert_eq!(metrics.plant_expansion_disclosures.len(), 2);
-        assert_eq!(metrics.sentiment_flag, FilingSentiment::PromoterPledgeRisk); // matched pledge keyword
+        // Zero pledge (0.0%) is not a risk; expansion capex is recognized
+        assert_eq!(metrics.sentiment_flag, FilingSentiment::StrongExpansionary);
+        assert_eq!(metrics.promoter_pledge_disclosures.len(), 0);
+
+        // Active pledging disclosure test
+        let sample_risk = "Promoter pledged shares increased to 45.2% of total equity as collateral.";
+        let risk_metrics = parser.parse_filing_disclosures(sample_risk, None).await;
+        assert_eq!(risk_metrics.sentiment_flag, FilingSentiment::PromoterPledgeRisk);
+        assert_eq!(risk_metrics.promoter_pledge_disclosures.len(), 1);
     }
 }

@@ -390,20 +390,18 @@ impl BiquadCascade {
         // Cascade Stage 5: Air High-Shelf
         self.high_shelf_air.process_buffer(buffer);
 
-        // Stage 6: Warm Analog Soft-Saturator (Hyperbolic Tangent with gentle drive)
+        // Stage 6: Warm Analog Soft-Saturator (C1-Continuous Hyperbolic Tangent with zero-clipping)
         if self.enable_soft_clipper {
+            let threshold = 0.85f32;
+            let headroom = 0.145f32; // Asymptotic ceiling at 0.995 (strictly prevents digital overs)
             for sample in buffer.iter_mut() {
                 let s = *sample;
-                if s.abs() > 0.85 {
-                    // Soft cubic saturation above 0.85 threshold to prevent harsh digital clipping
+                let abs_s = s.abs();
+                if abs_s > threshold {
                     let sign = if s >= 0.0 { 1.0 } else { -1.0 };
-                    let abs_s = s.abs();
-                    if abs_s >= 1.2 {
-                        *sample = sign * 0.995;
-                    } else {
-                        let diff = abs_s - 0.85;
-                        *sample = sign * (0.85 + diff / (1.0 + diff * diff));
-                    }
+                    let diff = abs_s - threshold;
+                    // C1 continuous: at diff = 0, value is threshold and slope is 1.0
+                    *sample = sign * (threshold + headroom * (diff / headroom).tanh());
                 }
             }
         }

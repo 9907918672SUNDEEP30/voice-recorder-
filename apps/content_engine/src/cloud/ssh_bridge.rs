@@ -38,7 +38,7 @@ impl SshBridge {
             .arg("-o")
             .arg("ConnectTimeout=5")
             .arg("-o")
-            .arg("StrictHostKeyChecking=no");
+            .arg("StrictHostKeyChecking=accept-new");
 
         if self.key_path.exists() {
             cmd.arg("-i").arg(&self.key_path);
@@ -76,7 +76,7 @@ impl SshBridge {
         let port_str = self.port.to_string();
 
         let mut scp_cmd = Command::new("scp");
-        scp_cmd.arg("-P").arg(&port_str).arg("-o").arg("StrictHostKeyChecking=no");
+        scp_cmd.arg("-P").arg(&port_str).arg("-o").arg("StrictHostKeyChecking=accept-new");
 
         if self.key_path.exists() {
             scp_cmd.arg("-i").arg(&self.key_path);
@@ -118,7 +118,7 @@ impl SshBridge {
         let port_str = self.port.to_string();
 
         let mut scp_cmd = Command::new("scp");
-        scp_cmd.arg("-P").arg(&port_str).arg("-o").arg("StrictHostKeyChecking=no");
+        scp_cmd.arg("-P").arg(&port_str).arg("-o").arg("StrictHostKeyChecking=accept-new");
 
         if self.key_path.exists() {
             scp_cmd.arg("-i").arg(&self.key_path);
@@ -136,12 +136,45 @@ impl SshBridge {
         }
     }
 
-    /// Triggers direct cloud publishing from Lightning AI node
+    /// Triggers direct cloud publishing from Lightning AI node using safe JSON config upload via SCP
     pub async fn trigger_cloud_publish(&self, title: &str, tags: &str) -> Result<String> {
-        println!("🚀 [SSH Bridge] Triggering Direct Cloud Publishing (1-10 Gbps cloud upload)...");
+        println!("🚀 [SSH Bridge] Triggering Direct Cloud Publishing via safe JSON payload...");
+        
+        // Write payload to a safe local temporary JSON file
+        let temp_dir = std::env::temp_dir();
+        let payload_path = temp_dir.join(format!("publish_payload_{}_{}.json", std::process::id(), chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let payload_json = serde_json::json!({
+            "title": title,
+            "tags": tags,
+            "video_path": format!("{}/output/master_4k.mp4", self.remote_dir),
+            "timestamp": chrono::Utc::now().timestamp()
+        });
+        tokio::fs::write(&payload_path, serde_json::to_string_pretty(&payload_json)?).await?;
+
+        // Upload payload JSON via SCP
+        let destination = format!("{}@{}:{}/input/publish_payload.json", self.user, self.host, self.remote_dir);
+        let port_str = self.port.to_string();
+
+        let mut scp_cmd = Command::new("scp");
+        scp_cmd.arg("-P").arg(&port_str).arg("-o").arg("StrictHostKeyChecking=accept-new");
+
+        if self.key_path.exists() {
+            scp_cmd.arg("-i").arg(&self.key_path);
+        }
+
+        scp_cmd.arg(&payload_path).arg(&destination);
+        let output = scp_cmd.output().await.map_err(|e| anyhow!("Failed to upload publish config: {}", e))?;
+        let _ = tokio::fs::remove_file(&payload_path).await; // Clean up local temp file
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(anyhow!("Publish config SCP upload failed: {}", err));
+        }
+
+        // Execute remote publisher with purely static file path reference (zero shell interpolation)
         let remote_exec = format!(
-            "python3 {}/input/cloud_publisher.py --video {}/output/master_4k.mp4 --title \"{}\" --tags \"{}\"",
-            self.remote_dir, self.remote_dir, title, tags
+            "python3 {}/input/cloud_publisher.py --config {}/input/publish_payload.json",
+            self.remote_dir, self.remote_dir
         );
         let output = self.run_remote_command(&remote_exec).await?;
         Ok(output)
@@ -157,7 +190,7 @@ impl SshBridge {
             .arg("-o")
             .arg("ConnectTimeout=10")
             .arg("-o")
-            .arg("StrictHostKeyChecking=no");
+            .arg("StrictHostKeyChecking=accept-new");
 
         if self.key_path.exists() {
             cmd.arg("-i").arg(&self.key_path);

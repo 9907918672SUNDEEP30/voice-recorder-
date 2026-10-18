@@ -24,6 +24,8 @@ pub struct UpdateMetadata {
     pub download_url: String,
     pub sha256: String,
     #[serde(default)]
+    pub signature_hex: Option<String>,
+    #[serde(default)]
     pub mandatory: bool,
 }
 

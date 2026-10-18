@@ -1,8 +1,20 @@
 # 🚀 Manifestation Super App — Deployment Guide (`apps/manifestation_app`)
+## Shambhavi AI Labs — Luxury Glassmorphism SPA & Native Mobile App (Android / iOS)
 
 ---
 
-## 🧪 1. टेस्टिंग गाइड (How to Test & Verify — टेस्ट कैसे करनी है)
+## 🧘 1. फ्रंटएंड व क्लाइंट आर्किटेक्चर (Frontend & Mobile App Architecture)
+
+| घटक | विवरण |
+|---|---|
+| **कोर AI इंजन** | "Core-Engine First" आर्किटेक्चर (`crates/core` / `ai_core`), SD-Turbo Safetensors द्वारा सिंगल-स्टेप 512x512 विजन बोर्ड जनरेशन, 0% पायथन |
+| **एम्बेडेड लक्ज़री वेब पोर्टल** | पोर्ट `9090` पर प्योर रस्ट Axum सर्वर (`http://localhost:9090`), ग्लासमोर्फिज्म थीम, 3-6-9 टेस्ला जर्नल, मिरर अफ़र्मेशन, और 528Hz/432Hz थिटा ऑडियो प्लेयर |
+| **नेटिव मोबाइल ऐप (Android / iOS)** | **High-End UI/UX Native Mobile App** — प्रीमियम वाइब्रेशनल रेजोनेंस, डेली मॉर्निंग/इवनिंग नोटिफिकेशन्स, और ऑन-डिवाइस विजुअल मैनिफेस्टेशन |
+| **लाइसेंसिंग एवं मीटरिंग** | `crates/drm_guard` द्वारा 24-घंटे लीज + OTA ऑटो-अपडेटर (`ManifestationMetrics`: अफ़र्मेशन्स, मेडिटेशन मिनट्स, और विजन बोर्ड्स) |
+
+---
+
+## 🧪 2. टेस्टिंग गाइड (How to Test & Verify — आप खुद कैसे टेस्ट करेंगे)
 
 ### Level 1: स्टेटिक कंपाइलेशन व लिंटिंग ऑडिट
 ```powershell
@@ -15,32 +27,21 @@ cargo clippy -p manifestation_app -- -D warnings
 cargo test -p manifestation_app -- --nocapture
 ```
 
-### Level 3: REST API एंडपॉइंट्स फंक्शनल टेस्टिंग
-```powershell
-# 1. ऐप प्रारंभ करें
-cargo run -p manifestation_app -- --port 9090
-
-# 2. सिस्टम स्टेटस व DRM लीज जांच
-Invoke-RestMethod -Uri "http://localhost:9090/api/status" -Method Get | ConvertTo-Json
-
-# 3. विजन बोर्ड निर्माण व SD-Turbo विजुअल एंकर रेंडरिंग
-Invoke-RestMethod -Uri "http://localhost:9090/api/vision/create" -Method Post -Body '{"title":"Palace Retreat","description":"Royal palace overlooking golden sunset lake","feeling":"Deep Serenity & Abundance","category":"Lifestyle"}' -ContentType "application/json"
-Invoke-RestMethod -Uri "http://localhost:9090/api/vision/vis_0001/render" -Method Post | Select-Object success
-
-# 4. 3-6-9 टेस्ला जर्नल व थिटा स्लीप मेडिटेशन
-Invoke-RestMethod -Uri "http://localhost:9090/api/gratitude/add" -Method Post -Body '{"entry_type":"Morning_3","text":"Infinite abundance flows through my consciousness."}' -ContentType "application/json"
-Invoke-RestMethod -Uri "http://localhost:9090/api/meditation/generate" -Method Post -Body '{"topic":"Peace and Joy"}' -ContentType "application/json"
-```
-
-### Level 4: लक्ज़री ग्लासमोर्फिज्म यूआई सत्यापन
-- ब्राउज़र में खोलें: `http://localhost:9090`
-- लिविंग विजन बोर्ड, 3-6-9 जर्नल, मिरर अफ़र्मेशन और 528 Hz सोल्फ़ेगियो स्लीप मेडिटेशन को इंटरएक्टिव रूप से टेस्ट करें।
+### Level 3: हैंड्स-ऑन लाइव इंटरएक्टिव वेब पोर्टल टेस्ट (Drive Manifestation App)
+1. **ऐप प्रारंभ करें:**
+   ```powershell
+   cargo run -p manifestation_app -- --port 9090
+   ```
+2. **ब्राउज़र में खोलें:**
+   - जाएं: `http://localhost:9090`
+   - **लिविंग विजन बोर्ड:** नया विजन बनाएं (e.g. *"Royal palace on misty mountain lake"*); SD-Turbo द्वारा सिंगल-स्टेप में रियल-टाइम इमेज जनरेट होगी।
+   - **3-6-9 जर्नल:** सुबह की 3 इंटेंशन लिखें और वाइब्रेशनल स्कोर देखें।
+   - **मिरर अफ़र्मेशन:** स्पीच/टेक्स्ट कंविक्शन स्कोरिंग टेस्ट करें।
+   - **528 Hz थिटा मेडिटेशन:** प्ले बटन दबाएं और बाइक्वाड जनरेटेड 528 Hz सोल्फ़ेगियो टोन सुनें।
 
 ---
 
-## 📋 2. प्री-डिप्लॉयमेंट चेकलिस्ट (Pre-Deployment Checklist — क्या-क्या ओके करना है)
-
-डिप्लॉयमेंट से ठीक पहले इन 6 बिंदुओं पर ओके (OK) टिक लगाना अनिवार्य है:
+## 📋 3. प्री-डिप्लॉयमेंट चेकलिस्ट (Pre-Deployment Checklist)
 
 - [ ] **1. Zero Compiler Warnings:** `cargo check --release -p manifestation_app` में शुद्ध 0 एरर और 0 वार्निंग्स।
 - [ ] **2. टेस्ट्स 100% उत्तीर्ण:** सभी यूनिट व इंटीग्रेशन टेस्ट्स सफल।
@@ -55,27 +56,27 @@ Invoke-RestMethod -Uri "http://localhost:9090/api/meditation/generate" -Method P
 
 ---
 
-## 🚀 3. फाइनल डिप्लॉयमेंट प्रक्रिया (Final Deployment Procedure — फाइनल डिप्लॉय कैसे करना है)
+## 🚀 4. फाइनल डिप्लॉयमेंट प्रक्रिया (Final Production Deployment)
 
 ### Step 1: प्रोडक्शन रिलीज़ बाइनरी संकलन
 ```powershell
 cargo build --release -p manifestation_app
 ```
-उत्पादित बाइनरी: `target/release/manifestation_app.exe` (Windows) या `target/release/manifestation_app` (Linux)।
+बाइनरी पाथ: `target/release/manifestation_app.exe` (Windows) या `target/release/manifestation_app` (Linux)।
 
-### Step 2: 24x7 ऑटो-स्टार्ट प्रोडक्शन सर्विस डिप्लॉयमेंट
+### Step 2: 24x7 ऑटो-स्टार्ट बैकग्राउंड सर्विस डिप्लॉयमेंट
 
-#### A. Windows Task Scheduler (सिस्टम बूट पर ऑटो-स्टार्ट बिना यूजर लॉगिन):
+#### A. Windows Task Scheduler (सिस्टम बूट पर ऑटो-स्टार्ट):
 ```powershell
 schtasks /create /tn "ShambhaviManifestation" `
   /tr "'D:\ai_core_framework - Copy (2)\target\release\manifestation_app.exe' --port 9090 --sd-models-dir 'C:\AI_Models\sd_turbo'" `
   /sc onstart /ru SYSTEM
 ```
 
-#### B. Linux Systemd Service (`/etc/systemd/system/manifestation.service`):
+#### B. Linux Headless Server Systemd Service (`/etc/systemd/system/manifestation.service`):
 ```ini
 [Unit]
-Description=Shambhavi Manifestation Super App Engine
+Description=Shambhavi Manifestation Super App Service
 After=network.target
 
 [Service]
@@ -91,9 +92,15 @@ MemoryMax=250M
 [Install]
 WantedBy=multi-user.target
 ```
-सक्षम व सक्रिय करें:
+सक्रिय करें:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now manifestation.service
-sudo systemctl status manifestation.service
+```
+
+### Step 3: नेटिव मोबाइल ऐप बंडलिंग (Android & iOS)
+रस्ट के कोर इंटेंशन व मेडिटेशन लॉजिक को मोबाइल ऐप के लिए कंपाइल किया जाता है:
+```powershell
+cargo build --target aarch64-linux-android --release -p manifestation_app
+cargo build --target aarch64-apple-ios --release -p manifestation_app
 ```

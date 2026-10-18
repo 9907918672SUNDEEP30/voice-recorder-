@@ -47,15 +47,12 @@ pub struct LeaseGuardian {
 
 impl LeaseGuardian {
     pub fn new(machine_hash: String) -> Self {
-        // Default to a 24-hour initial factory evaluation lease
-        let now = Utc::now();
-        let expires_at = now + chrono::Duration::hours(24);
+        // FAIL CLOSED: Default to Locked status until cryptographically verified lease is active
         Self {
             machine_hash,
-            current_status: LeaseStatus::Active {
-                tenant_id: "shambhavi_factory_eval".to_string(),
-                expires_at,
-                cameras_entitled: 8,
+            current_status: LeaseStatus::Locked {
+                reason: "Appliance startup. Cryptographic lease verification required.".to_string(),
+                renewal_url: "https://billing.shambhavi-ai-labs.com/activate".to_string(),
             },
         }
     }
@@ -78,6 +75,15 @@ impl LeaseGuardian {
         }
     }
 
+    /// Unlocks local NVR lease when unified DRMGuard validates an Ed25519 cloud lease
+    pub fn unlock_from_drm(&mut self, cameras_entitled: u32, expires_at: DateTime<Utc>) {
+        self.current_status = LeaseStatus::Active {
+            tenant_id: "shambhavi_cloud_lease".to_string(),
+            expires_at,
+            cameras_entitled,
+        };
+    }
+
     /// Verify an incoming lease payload from Cloudflare Worker
     pub fn apply_lease_token(&mut self, payload: LeaseTokenPayload) -> Result<(), String> {
         if payload.machine_hash != self.machine_hash {
@@ -95,6 +101,28 @@ impl LeaseGuardian {
                 renewal_url: "https://billing.shambhavi-ai-labs.com/pay".to_string(),
             };
             return Err("Token expired".to_string());
+        }
+
+        // Strict Ed25519 signature verification against root key
+        let canonical_msg = format!(
+            "{}:{}:{}:{}:{}",
+            payload.box_id,
+            payload.machine_hash,
+            payload.tenant_id,
+            payload.expires_at.timestamp(),
+            payload.cameras_entitled
+        );
+
+        if let Err(e) = drm_guard::verify_ed25519_signature(
+            drm_guard::ROOT_ED25519_PUBLIC_KEY_HEX,
+            &canonical_msg,
+            &payload.signature_hex,
+        ) {
+            self.current_status = LeaseStatus::Locked {
+                reason: format!("Cryptographic signature verification failed: {}", e),
+                renewal_url: "https://billing.shambhavi-ai-labs.com/support".to_string(),
+            };
+            return Err(format!("Cryptographic signature mismatch: {}", e));
         }
 
         // Apply active lease

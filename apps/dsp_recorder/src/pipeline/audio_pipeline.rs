@@ -197,6 +197,12 @@ impl StudioAudioPipeline {
             let start_time = Instant::now();
             let mut total_samples_written = 0u64;
 
+            // Single persistent runtime for VAD evaluation (eliminates per-chunk runtime recreation latency)
+            let vad_runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .ok();
+
             while is_running_clone.load(Ordering::Relaxed) {
                 match capture_rx.recv_timeout(Duration::from_millis(50)) {
                     Ok(mut chunk) => {
@@ -232,11 +238,8 @@ impl StudioAudioPipeline {
                                     pcm_bytes.extend_from_slice(&s16.to_le_bytes());
                                 }
 
-                                // Run VAD chunk classification synchronously on worker thread
-                                let rt = tokio::runtime::Builder::new_current_thread()
-                                    .enable_all()
-                                    .build();
-                                if let Ok(rt) = rt {
+                                // Run VAD chunk classification synchronously on persistent worker runtime
+                                if let Some(ref rt) = vad_runtime {
                                     if let Ok((active, prob)) = rt.block_on(vad.process_chunk(&pcm_bytes)) {
                                         is_speech = active && prob >= vad_threshold;
                                         speech_prob = prob;

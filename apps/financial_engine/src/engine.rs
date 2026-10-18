@@ -24,6 +24,8 @@ pub enum MasterVerdict {
     AvoidRisk,          // < 5.0 Composite Score, High Debt, Weak Cash Flow, or Technical Breakdown
 }
 
+pub const SEBI_STATUTORY_DISCLAIMER: &str = "Algorithmic Quantitative Analysis Engine — strictly for informational and quantitative research purposes. Shambhavi Financial Super Engine is not a SEBI-registered Research Analyst or Investment Adviser under SEBI (Research Analysts) Regulations, 2014. No content constitutes financial advice or solicitation to buy or sell securities.";
+
 /// Unified Institutional Master Stock Report
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MasterStockReport {
@@ -45,6 +47,7 @@ pub struct MasterStockReport {
     pub key_catalysts: Vec<String>,
     pub red_flags: Vec<String>,
     pub generated_at_epoch_ms: u64,
+    pub compliance_disclaimer: String,
 }
 
 /// The Core Master Financial Super Engine
@@ -130,14 +133,19 @@ impl FinancialSuperEngine {
             .map(|i| (i.net_profit / i.sales.max(1.0)) * 100.0)
             .unwrap_or(10.0);
 
+        let (industry_tam_cr, industry_cagr_pct) =
+            TamSimulationEngine::get_sector_tam_and_cagr(&profile.sector);
+        let current_market_share_pct =
+            ((base_sales / industry_tam_cr) * 100.0).clamp(0.01, 95.0);
+
         let tam_set = TamSimulationEngine::simulate(
             base_sales,
             base_ebitda_margin,
             base_pat_margin,
             profile.market_cap_cr / profile.current_price.max(1.0), // Approximate shares
-            base_sales * 15.0,                                      // Industry TAM estimate
-            6.67,                                                   // Current market share estimate
-            14.0,                                                   // 14% Industry CAGR
+            industry_tam_cr,
+            current_market_share_pct,
+            industry_cagr_pct,
         );
         let tam_score = tam_set.tam_growth_score;
 
@@ -228,6 +236,7 @@ impl FinancialSuperEngine {
             key_catalysts,
             red_flags,
             generated_at_epoch_ms,
+            compliance_disclaimer: SEBI_STATUTORY_DISCLAIMER.to_string(),
         })
     }
 

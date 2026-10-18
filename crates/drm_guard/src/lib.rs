@@ -11,7 +11,7 @@ pub mod telemetry;
 pub mod updater;
 
 pub use clock::MonotonicClockGuard;
-pub use guard::{DRMGuard, DRMGuardBuilder};
+pub use guard::{CachedSignedLease, verify_ed25519_signature, DRMGuard, DRMGuardBuilder, ROOT_ED25519_PUBLIC_KEY_HEX};
 pub use hardware::MachineFingerprint;
 pub use heartbeat::{DrmStatusInfo, HeartbeatRequest, HeartbeatResponse, LicenseStatus, UpdateMetadata};
 pub use session_key::{AesGcmCipher, VolatileSessionKey};

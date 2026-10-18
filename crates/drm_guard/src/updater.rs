@@ -18,10 +18,14 @@ pub enum OtaStatus {
     Failed(String),
 }
 
+pub const MAX_DOWNLOAD_BYTES: usize = 150 * 1024 * 1024; // 150 Megabytes maximum
+
+#[derive(Clone)]
 pub struct OtaUpdater {
     current_version: String,
     http_client: Client,
     staging_dir: Option<PathBuf>,
+    attempted_versions: std::sync::Arc<std::sync::Mutex<std::collections::HashSet<String>>>,
 }
 
 impl OtaUpdater {
@@ -29,10 +33,11 @@ impl OtaUpdater {
         Self {
             current_version: current_version.into(),
             http_client: Client::builder()
-                .timeout(Duration::from_secs(60))
+                .timeout(Duration::from_secs(120))
                 .build()
                 .unwrap_or_default(),
             staging_dir: None,
+            attempted_versions: std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new())),
         }
     }
 
@@ -47,6 +52,20 @@ impl OtaUpdater {
 
     pub fn staging_dir(&self) -> Option<&Path> {
         self.staging_dir.as_deref()
+    }
+
+    pub fn has_attempted(&self, version: &str) -> bool {
+        if let Ok(set) = self.attempted_versions.lock() {
+            set.contains(version)
+        } else {
+            false
+        }
+    }
+
+    pub fn mark_attempted(&self, version: &str) {
+        if let Ok(mut set) = self.attempted_versions.lock() {
+            set.insert(version.to_string());
+        }
     }
 
     /// Evaluates if an available version is strictly newer than current version
@@ -88,8 +107,10 @@ impl OtaUpdater {
         computed.eq_ignore_ascii_case(expected_sha256.trim())
     }
 
-    /// Downloads and stages update binary in the background, validating SHA-256 integrity
+    /// Downloads and stages update binary in the background, validating SHA-256 integrity and Ed25519 signature
     pub async fn download_and_verify(&self, metadata: &UpdateMetadata) -> Result<Vec<u8>> {
+        self.mark_attempted(&metadata.version_available);
+
         if !self.is_newer_version(&metadata.version_available) {
             return Err(anyhow!(
                 "Available version '{}' is not newer than current '{}'",
@@ -98,12 +119,23 @@ impl OtaUpdater {
             ));
         }
 
+        let url = &metadata.download_url;
+        let is_secure = url.starts_with("https://")
+            || url.starts_with("http://127.0.0.1")
+            || url.starts_with("http://localhost");
+        if !is_secure {
+            return Err(anyhow!(
+                "Insecure download URL rejected. OTA updates must be downloaded over HTTPS: {}",
+                url
+            ));
+        }
+
         println!(
-            "[OTA UPDATER] Downloading update binary v{} from {}",
+            "[OTA UPDATER] Securely downloading update binary v{} from {}",
             metadata.version_available, metadata.download_url
         );
 
-        let response = self
+        let mut response = self
             .http_client
             .get(&metadata.download_url)
             .send()
@@ -114,19 +146,46 @@ impl OtaUpdater {
             return Err(anyhow!("Update server returned HTTP error: {}", response.status()));
         }
 
-        let bytes = response
-            .bytes()
-            .await
-            .context("Failed to read update binary bytes")?
-            .to_vec();
+        if let Some(content_len) = response.content_length() {
+            if content_len > MAX_DOWNLOAD_BYTES as u64 {
+                return Err(anyhow!(
+                    "Update payload exceeds maximum allowed limit ({} MB)",
+                    MAX_DOWNLOAD_BYTES / (1024 * 1024)
+                ));
+            }
+        }
 
-        // Cryptographic integrity validation
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await.context("Error reading response chunk")? {
+            if bytes.len() + chunk.len() > MAX_DOWNLOAD_BYTES {
+                return Err(anyhow!(
+                    "Update binary download exceeded 150 MB safety threshold. Download aborted."
+                ));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+
+        // 1. Cryptographic SHA-256 integrity validation
         if !Self::verify_integrity(&bytes, &metadata.sha256) {
             return Err(anyhow!(
                 "Cryptographic integrity mismatch! Expected SHA-256: {}, Computed: {}",
                 metadata.sha256,
                 Self::compute_sha256(&bytes)
             ));
+        }
+
+        // 2. Cryptographic Ed25519 signature verification against embedded root public key
+        if let Some(sig_hex) = &metadata.signature_hex {
+            crate::guard::verify_ed25519_signature(
+                crate::guard::ROOT_ED25519_PUBLIC_KEY_HEX,
+                &metadata.sha256,
+                sig_hex,
+            ).context("OTA Binary Ed25519 signature verification failed")?;
+
+            println!(
+                "[OTA UPDATER] Ed25519 cryptographic signature verified for v{}",
+                metadata.version_available
+            );
         }
 
         println!(

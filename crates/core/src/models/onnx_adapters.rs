@@ -228,6 +228,80 @@ impl TtsAdapter for OpenVoiceLocal {
     }
 }
 
+// Helper functions for mathematically authentic Whisper audio preprocessing
+fn create_hann_window(size: usize) -> Vec<f32> {
+    let mut w = Vec::with_capacity(size);
+    for n in 0..size {
+        let val = 0.5 * (1.0 - (2.0 * std::f32::consts::PI * (n as f32) / (size as f32)).cos());
+        w.push(val);
+    }
+    w
+}
+
+fn create_dft_basis(n_bins: usize, n_samples: usize) -> (Vec<f32>, Vec<f32>) {
+    let mut cos_table = vec![0.0f32; n_bins * n_samples];
+    let mut sin_table = vec![0.0f32; n_bins * n_samples];
+    for k in 0..n_bins {
+        for n in 0..n_samples {
+            let angle = 2.0 * std::f32::consts::PI * (k as f32) * (n as f32) / (n_samples as f32);
+            cos_table[k * n_samples + n] = angle.cos();
+            sin_table[k * n_samples + n] = angle.sin();
+        }
+    }
+    (cos_table, sin_table)
+}
+
+fn create_whisper_mel_filterbank(n_mels: usize, n_fft_bins: usize, sample_rate: f32) -> Vec<f32> {
+    let hz_to_mel = |hz: f32| -> f32 {
+        2595.0 * (1.0 + hz / 700.0).log10()
+    };
+    let mel_to_hz = |mel: f32| -> f32 {
+        700.0 * (10.0f32.powf(mel / 2595.0) - 1.0)
+    };
+
+    let mel_min = hz_to_mel(0.0);
+    let mel_max = hz_to_mel(sample_rate / 2.0); // 8000 Hz
+
+    let mut mel_pts = Vec::with_capacity(n_mels + 2);
+    for i in 0..(n_mels + 2) {
+        let m = mel_min + (mel_max - mel_min) * (i as f32) / ((n_mels + 1) as f32);
+        mel_pts.push(mel_to_hz(m));
+    }
+
+    let mut bin_pts = Vec::with_capacity(n_mels + 2);
+    let n_fft = (n_fft_bins - 1) * 2; // 400
+    for &hz in &mel_pts {
+        let b = (n_fft as f32 * hz / sample_rate).min((n_fft_bins - 1) as f32);
+        bin_pts.push(b);
+    }
+
+    let mut filterbank = vec![0.0f32; n_mels * n_fft_bins];
+    for m in 0..n_mels {
+        let left = bin_pts[m];
+        let center = bin_pts[m + 1];
+        let right = bin_pts[m + 2];
+
+        let enorm = if mel_pts[m + 2] > mel_pts[m] {
+            2.0 / (mel_pts[m + 2] - mel_pts[m])
+        } else {
+            1.0
+        };
+
+        for k in 0..n_fft_bins {
+            let k_f = k as f32;
+            let weight = if k_f >= left && k_f <= center && center > left {
+                (k_f - left) / (center - left)
+            } else if k_f > center && k_f <= right && right > center {
+                (right - k_f) / (right - center)
+            } else {
+                0.0
+            };
+            filterbank[m * n_fft_bins + k] = weight * enorm;
+        }
+    }
+    filterbank
+}
+
 // ============================================================================
 // 3. WHISPER STT (SPEECH TO TEXT) - 100% REAL ONNX
 // ============================================================================
@@ -235,6 +309,10 @@ pub struct WhisperTinyLocal {
     session_encoder: Arc<Mutex<Session>>,
     session_decoder: Arc<Mutex<Session>>,
     tokenizer: Arc<tokenizers::Tokenizer>,
+    mel_filters: Arc<Vec<f32>>,
+    dft_basis: Arc<(Vec<f32>, Vec<f32>)>,
+    hann_window: Arc<Vec<f32>>,
+    pub language_token: i64,
 }
 
 impl WhisperTinyLocal {
@@ -261,13 +339,31 @@ impl WhisperTinyLocal {
         let tokenizer = tokenizers::Tokenizer::from_file(tokenizer_path)
             .map_err(|e| anyhow::anyhow!("Failed to load Whisper tokenizer: {}", e))?;
 
+        let hann_window = Arc::new(create_hann_window(400));
+        let dft_basis = Arc::new(create_dft_basis(201, 400));
+        let mel_filters = Arc::new(create_whisper_mel_filterbank(80, 201, 16000.0));
+
         Ok(Self {
             session_encoder: Arc::new(Mutex::new(session_encoder)),
             session_decoder: Arc::new(Mutex::new(session_decoder)),
             tokenizer: Arc::new(tokenizer),
+            mel_filters,
+            dft_basis,
+            hann_window,
+            language_token: 50259, // English default (<|en|>)
         })
     }
 
+    /// Sets the decoding language: "hi" for Hindi (50276), "en" for English (50259).
+    pub fn set_language(&mut self, lang: &str) {
+        self.language_token = match lang.to_lowercase().as_str() {
+            "hi" | "hindi" => 50276,
+            _ => 50259,
+        };
+    }
+
+    /// Computes authentic 80-bin Log-Mel Spectrogram via Hann windowing, 201-bin Real DFT,
+    /// 80-channel triangular Mel filterbank matrix, and Whisper standard dynamic range normalization.
     fn compute_log_mel_spectrogram(&self, pcm: &[u8]) -> Result<Vec<f32>> {
         let mut samples = Vec::with_capacity(pcm.len() / 2);
         for chunk in pcm.chunks_exact(2) {
@@ -280,22 +376,66 @@ impl WhisperTinyLocal {
 
         let frame_size = 400;
         let hop_size = 160;
-        let num_frames = 3000.min(if samples.len() > frame_size {
-            (samples.len() - frame_size) / hop_size
+        let n_bins = 201;
+        let num_frames = 3000.min(if samples.len() >= frame_size {
+            ((samples.len() - frame_size) / hop_size) + 1
+        } else if !samples.is_empty() {
+            1
         } else {
             0
         });
 
+        if num_frames == 0 {
+            return Ok(mel_features);
+        }
+
+        let (ref cos_table, ref sin_table) = *self.dft_basis;
+        let mut raw_log_mels = vec![0.0f32; 80 * num_frames];
+        let mut global_max = f32::NEG_INFINITY;
+
         for t in 0..num_frames {
             let start = t * hop_size;
-            let end = (start + frame_size).min(samples.len());
-            let frame = &samples[start..end];
+            let mut windowed = [0.0f32; 400];
+            for n in 0..frame_size {
+                let s = if start + n < samples.len() { samples[start + n] } else { 0.0 };
+                windowed[n] = s * self.hann_window[n];
+            }
 
-            let energy: f32 = frame.iter().map(|&x| x * x).sum::<f32>() / frame.len() as f32;
-            let log_energy = (energy + 1e-5).ln().max(-10.0);
+            // Real DFT across 201 frequency bins (0 Hz to 8000 Hz)
+            let mut power = [0.0f32; 201];
+            for k in 0..n_bins {
+                let mut re = 0.0f32;
+                let mut im = 0.0f32;
+                let offset = k * frame_size;
+                for n in 0..frame_size {
+                    let w = windowed[n];
+                    re += w * cos_table[offset + n];
+                    im -= w * sin_table[offset + n];
+                }
+                power[k] = re * re + im * im;
+            }
 
+            // Apply 80 Mel filters
             for m in 0..80 {
-                mel_features[m * 3000 + t] = log_energy;
+                let m_offset = m * n_bins;
+                let mut mel_energy = 0.0f32;
+                for k in 0..n_bins {
+                    mel_energy += self.mel_filters[m_offset + k] * power[k];
+                }
+                let log_spec = (mel_energy.max(1e-10)).log10();
+                raw_log_mels[m * num_frames + t] = log_spec;
+                if log_spec > global_max {
+                    global_max = log_spec;
+                }
+            }
+        }
+
+        // Whisper standard normalization: max-8.0 clamp, (spec + 4.0) / 4.0
+        let threshold = global_max - 8.0;
+        for m in 0..80 {
+            for t in 0..num_frames {
+                let spec = raw_log_mels[m * num_frames + t].max(threshold);
+                mel_features[m * 3000 + t] = (spec + 4.0) / 4.0;
             }
         }
 
@@ -329,7 +469,8 @@ impl SttAdapter for WhisperTinyLocal {
             )
         };
 
-        let mut decoder_tokens: Vec<i64> = vec![50258, 50259, 50359, 50363];
+        // Decoder prompt tokens: <|startoftranscript|>, <|language|>, <|transcribe|>, <|notimestamps|>
+        let mut decoder_tokens: Vec<i64> = vec![50258, self.language_token, 50359, 50363];
         let max_tokens = 60;
 
         let mut dec_guard = self

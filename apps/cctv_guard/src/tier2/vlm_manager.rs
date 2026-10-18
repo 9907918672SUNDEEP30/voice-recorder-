@@ -14,7 +14,7 @@ pub struct VlmManagerConfig {
 impl Default for VlmManagerConfig {
     fn default() -> Self {
         Self {
-            model_path: "C:\\AI_Models\\qwen2_vl_2b_int4.onnx".to_string(),
+            model_path: "C:\\AI_Models\\qwen2-vl-2b\\visionmodel.onnx".to_string(),
             unload_after_idle_secs: 60,
         }
     }

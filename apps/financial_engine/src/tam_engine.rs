@@ -207,6 +207,32 @@ impl TamSimulationEngine {
         let ratio = end_val / start_val;
         ((ratio.powf(1.0 / years as f64)) - 1.0) * 100.0
     }
+
+    /// Returns realistic (Industry TAM in Crores, Industry Historic/Projected CAGR %) for Indian equity sectors.
+    pub fn get_sector_tam_and_cagr(sector: &str) -> (f64, f64) {
+        let s = sector.to_lowercase();
+        if s.contains("it") || s.contains("information") || s.contains("software") || s.contains("tech") {
+            (2_100_000.0, 9.5) // Indian IT & Global Tech Services
+        } else if s.contains("bank") || s.contains("financial") || s.contains("nbfc") || s.contains("insurance") {
+            (18_000_000.0, 13.0) // Indian Banking, Credit & Financial Services
+        } else if s.contains("auto") || s.contains("motor") || s.contains("ev") || s.contains("vehicle") {
+            (1_200_000.0, 11.5) // Indian Automotive & Mobility
+        } else if s.contains("pharma") || s.contains("health") || s.contains("drug") || s.contains("bio") {
+            (450_000.0, 10.5) // Indian Pharmaceuticals & Healthcare
+        } else if s.contains("fmcg") || s.contains("consumer") || s.contains("food") || s.contains("beverage") {
+            (1_100_000.0, 9.0) // Indian FMCG & Retail
+        } else if s.contains("infra") || s.contains("capital") || s.contains("power") || s.contains("energy") || s.contains("engineer") {
+            (1_500_000.0, 15.0) // Indian Infrastructure, Energy & Capex
+        } else if s.contains("chem") || s.contains("specialty") || s.contains("paint") {
+            (350_000.0, 12.0) // Indian Specialty Chemicals & Materials
+        } else if s.contains("metal") || s.contains("steel") || s.contains("mining") {
+            (800_000.0, 7.5) // Indian Metals, Steel & Mining
+        } else if s.contains("telecom") || s.contains("digital") || s.contains("media") {
+            (400_000.0, 12.5) // Indian Telecom & Digital Ecosystem
+        } else {
+            (2_500_000.0, 10.0) // Multi-sector Conglomerates / General Indian Industry
+        }
+    }
 }
 
 #[cfg(test)]

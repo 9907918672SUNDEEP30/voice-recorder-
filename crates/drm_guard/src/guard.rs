@@ -13,7 +13,6 @@ use super::updater::OtaUpdater;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use reqwest::Client;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -226,8 +225,60 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
             update_available: st.update_available.clone(),
         }
     }
+}
 
-    /// Executes immediate lease heartbeat cycle
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+pub const ROOT_ED25519_PUBLIC_KEY_HEX: &str =
+    "82d9651fdb75e85ab7e88c35440e4c7629b53b97c9fbfdf2335a6cb458af1400";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedSignedLease {
+    pub client_id: String,
+    pub machine_uuid: String,
+    pub app_name: String,
+    pub expires_at: i64,
+    pub nonce: String,
+    pub session_key_hex: Option<String>,
+    pub signature_hex: String,
+}
+
+pub fn verify_ed25519_signature(
+    pubkey_hex: &str,
+    canonical_msg: &str,
+    sig_hex: &str,
+) -> Result<()> {
+    let pubkey_bytes = hex::decode(pubkey_hex).map_err(|e| anyhow!("Invalid public key hex: {}", e))?;
+    if pubkey_bytes.len() != 32 {
+        return Err(anyhow!("Invalid Ed25519 public key length (must be 32 bytes)"));
+    }
+    let mut pubkey_arr = [0u8; 32];
+    pubkey_arr.copy_from_slice(&pubkey_bytes);
+    let verifying_key = VerifyingKey::from_bytes(&pubkey_arr)
+        .map_err(|e| anyhow!("Invalid Ed25519 verifying key point: {}", e))?;
+
+    let sig_bytes = hex::decode(sig_hex).map_err(|e| anyhow!("Invalid signature hex: {}", e))?;
+    if sig_bytes.len() != 64 {
+        return Err(anyhow!("Invalid Ed25519 signature length (must be 64 bytes)"));
+    }
+    let mut sig_arr = [0u8; 64];
+    sig_arr.copy_from_slice(&sig_bytes);
+    let signature = Signature::from_bytes(&sig_arr);
+
+    verifying_key
+        .verify(canonical_msg.as_bytes(), &signature)
+        .map_err(|e| anyhow!("Ed25519 cryptographic signature mismatch: {}", e))?;
+    Ok(())
+}
+
+fn lease_cache_path(app_name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!(".shambhavi_lease_{}.json", app_name))
+}
+
+impl<M: UsageMetricProvider> DRMGuard<M> {
+    /// Executes immediate lease heartbeat cycle with Ed25519 signature verification
     pub async fn perform_heartbeat(&self) -> Result<()> {
         if !self.clock_guard.check_integrity() {
             self.invalidate_and_zeroize(LicenseStatus::ClockTamperingDetected).await;
@@ -241,13 +292,13 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         let license_key = self.license_key.read().await.clone();
 
         let req = HeartbeatRequest {
-            client_id,
+            client_id: client_id.clone(),
             license_key: license_key.clone(),
             machine_uuid: self.fingerprint.machine_uuid.clone(),
             app_name: self.metrics_provider.app_name().to_string(),
             current_version: Some(self.updater.current_version().to_string()),
             timestamp: now,
-            nonce,
+            nonce: nonce.clone(),
             metrics,
         };
 
@@ -263,7 +314,10 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                             st.update_available = Some(update_meta.clone());
                         }
 
-                        if self.updater.is_newer_version(&update_meta.version_available) {
+                        if self.updater.is_newer_version(&update_meta.version_available)
+                            && !self.updater.has_attempted(&update_meta.version_available)
+                        {
+                            self.updater.mark_attempted(&update_meta.version_available);
                             println!(
                                 "[OTA UPDATER] New version available: v{} (Current: v{}) | Mandatory: {}",
                                 update_meta.version_available,
@@ -274,7 +328,6 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                             let updater_clone = self.updater.clone();
                             let meta_clone = update_meta.clone();
 
-                            // Asynchronously download and stage update in the background
                             tokio::spawn(async move {
                                 match updater_clone.download_and_verify(&meta_clone).await {
                                     Ok(bytes) => {
@@ -290,9 +343,45 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                         }
                     }
 
+                    let canonical_msg = format!(
+                        "{}:{}:{}:{}:{}:{}",
+                        client_id,
+                        req.machine_uuid,
+                        req.app_name,
+                        body.expires_at,
+                        req.nonce,
+                        body.session_key_hex.as_deref().unwrap_or("")
+                    );
+
                     match body.status.as_str() {
                         "granted" => {
+                            let sig_hex = body
+                                .signature_hex
+                                .as_deref()
+                                .ok_or_else(|| anyhow!("Server response missing required signature_hex"))?;
+
+                            // Strict Cryptographic Ed25519 Verification against Embedded Root Key
+                            verify_ed25519_signature(ROOT_ED25519_PUBLIC_KEY_HEX, &canonical_msg, sig_hex)?;
+
+                            // Cache verified lease to disk for offline grace
+                            let cached_lease = CachedSignedLease {
+                                client_id: client_id.clone(),
+                                machine_uuid: req.machine_uuid.clone(),
+                                app_name: req.app_name.clone(),
+                                expires_at: body.expires_at,
+                                nonce: req.nonce.clone(),
+                                session_key_hex: body.session_key_hex.clone(),
+                                signature_hex: sig_hex.to_string(),
+                            };
+                            if let Ok(json_str) = serde_json::to_string(&cached_lease) {
+                                let _ = std::fs::write(lease_cache_path(&req.app_name), json_str);
+                            }
+
                             self.apply_lease(body.expires_at, body.session_key_hex.as_deref()).await?;
+                            println!(
+                                "[DRM GUARD] Cryptographic Ed25519 lease verified & granted for app '{}' until {}",
+                                req.app_name, body.expires_at
+                            );
                             return Ok(());
                         }
                         "limit_exceeded" => {
@@ -309,41 +398,54 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                     eprintln!("[DRM GUARD] Worker returned non-success HTTP status: {}", resp.status());
                 }
                 Err(e) => {
-                    eprintln!("[DRM GUARD] Network error connecting to licensing worker: {}. Checking grace period...", e);
+                    eprintln!("[DRM GUARD] Network error connecting to licensing worker: {}. Checking offline grace...", e);
                 }
             }
         }
 
-        // Autonomous / Offline Grace Evaluation:
-        let license_key = self.license_key.read().await.clone();
-        if !license_key.is_empty() {
-            let lease_duration = 86400; // 24 hours
-            let expires_at = now + lease_duration;
+        // Offline / Network Error Evaluation:
+        // FAIL CLOSED: Only allow execution if a previously cryptographically verified server-signed lease exists on disk,
+        // its signature is valid, and its expires_at timestamp is still in the future!
+        let cache_file = lease_cache_path(self.metrics_provider.app_name());
+        if let Ok(cache_data) = std::fs::read_to_string(&cache_file) {
+            if let Ok(cached) = serde_json::from_str::<CachedSignedLease>(&cache_data) {
+                let cached_canonical = format!(
+                    "{}:{}:{}:{}:{}:{}",
+                    cached.client_id,
+                    cached.machine_uuid,
+                    cached.app_name,
+                    cached.expires_at,
+                    cached.nonce,
+                    cached.session_key_hex.as_deref().unwrap_or("")
+                );
 
-            let window_slot = now / lease_duration;
-            let mut hasher = Sha256::new();
-            hasher.update(license_key.as_bytes());
-            hasher.update(self.fingerprint.machine_uuid.as_bytes());
-            hasher.update(self.metrics_provider.app_name().as_bytes());
-            hasher.update(window_slot.to_le_bytes());
-            let key_bytes: [u8; 32] = hasher.finalize().into();
-            let session_key = VolatileSessionKey::from_bytes(key_bytes);
-
-            let mut st = self.state.write().await;
-            st.status = LicenseStatus::Active;
-            st.expires_at = expires_at;
-            st.session_key = Some(session_key);
-            st.last_verified_ts = now;
-
-            println!(
-                "[DRM GUARD] 24-Hour Lease granted for app '{}' on machine UUID: {}",
-                self.metrics_provider.app_name(), self.fingerprint.machine_uuid
-            );
-            Ok(())
-        } else {
-            self.invalidate_and_zeroize(LicenseStatus::Unlicensed).await;
-            Err(anyhow!("No valid license key specified."))
+                if verify_ed25519_signature(ROOT_ED25519_PUBLIC_KEY_HEX, &cached_canonical, &cached.signature_hex).is_ok()
+                    && cached.machine_uuid == self.fingerprint.machine_uuid
+                    && cached.client_id == client_id
+                {
+                    if now < cached.expires_at {
+                        self.apply_lease(cached.expires_at, cached.session_key_hex.as_deref()).await?;
+                        println!(
+                            "[DRM GUARD] Offline grace active. Verified server lease valid until: {} (Remaining: {}s)",
+                            cached.expires_at, cached.expires_at - now
+                        );
+                        return Ok(());
+                    } else {
+                        self.invalidate_and_zeroize(LicenseStatus::Expired).await;
+                        return Err(anyhow!(
+                            "Server-signed lease expired at timestamp {}. Active connection required to renew.",
+                            cached.expires_at
+                        ));
+                    }
+                }
+            }
         }
+
+        // No valid server-signed lease exists -> Fail Closed
+        self.invalidate_and_zeroize(LicenseStatus::Unlicensed).await;
+        Err(anyhow!(
+            "No cryptographically verified license lease found. Server connection required to activate."
+        ))
     }
 
     async fn apply_lease(&self, expires_at: i64, key_hex: Option<&str>) -> Result<()> {

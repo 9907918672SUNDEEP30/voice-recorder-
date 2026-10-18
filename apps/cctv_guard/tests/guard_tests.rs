@@ -124,44 +124,20 @@ fn test_tier1_hysteresis_and_cooldown() {
 }
 
 #[test]
-fn test_tier2_vlm_manager_and_threat_classification() {
+fn test_tier2_vlm_manager_fail_closed_on_missing_model() {
     let mut manager = VlmLifecycleManager::new(VlmManagerConfig {
         model_path: "C:\\AI_Models\\non_existent_test_model.onnx".to_string(),
         unload_after_idle_secs: 10,
     });
 
-    // Test quiet frame
-    let quiet_frame = CctvFrame::synthetic_pattern(640, 480, 40, 40, 45, 100, 1);
-    let assessment_quiet = manager.evaluate_event(&quiet_frame).expect("VLM evaluation failed");
-    assert_eq!(assessment_quiet.threat_level, ThreatLevel::Safe);
-    assert_eq!(manager.total_triggers(), 1);
+    // Zero-Mock Doctrine: When model is missing, engine MUST fail closed rather than faking threat assessments!
+    let frame = CctvFrame::synthetic_pattern(640, 480, 40, 40, 45, 100, 1);
+    let res = manager.evaluate_event(&frame);
+    assert!(res.is_err(), "VLM must strictly reject inference when model file does not exist");
 
-    // Test armed threat frame (synthetic firearm drawing)
-    let mut armed_frame_raw = vec![180u8; 640 * 480 * 3];
-    // Paint dark tactical hoodie and gunmetal firearm
-    for y in 150..350 {
-        for x in 200..400 {
-            let idx = (y * 640 + x) * 3;
-            if x < 300 {
-                // Tactical hoodie
-                armed_frame_raw[idx] = 15;
-                armed_frame_raw[idx + 1] = 15;
-                armed_frame_raw[idx + 2] = 20;
-            } else {
-                // Steel revolver gunmetal
-                armed_frame_raw[idx] = 65;
-                armed_frame_raw[idx + 1] = 65;
-                armed_frame_raw[idx + 2] = 68;
-            }
-        }
-    }
-    let armed_frame = CctvFrame::new(640, 480, armed_frame_raw, 200, 2).unwrap();
-    let assessment_armed = manager.evaluate_event(&armed_frame).expect("VLM evaluation failed");
-
-    assert_eq!(assessment_armed.threat_level, ThreatLevel::Critical);
-    assert_eq!(assessment_armed.category, ThreatCategory::WeaponThreat);
-    assert!(assessment_armed.confidence > 0.90);
-    assert_eq!(manager.total_triggers(), 2);
+    // Housekeeping runs cleanly without crashing
+    manager.tick_housekeeping();
+    assert_eq!(manager.total_triggers(), 0);
 }
 
 #[test]

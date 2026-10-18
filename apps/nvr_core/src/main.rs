@@ -75,23 +75,57 @@ async fn main() -> Result<()> {
     println!("💻 CPU ID:               {}", fingerprint.cpu_id);
     println!("🌐 Primary MAC:          {}", fingerprint.primary_mac);
 
-    // 2. 24-Hour Rotating Cloud Lease Validation (Cloudflare Worker + Supabase)
-    let mut lease_guardian = LeaseGuardian::new(fingerprint.machine_hash.clone());
-    lease_guardian.tick();
-    if !lease_guardian.is_authorized() {
-        eprintln!("❌ [SECURITY LOCKOUT] Appliance lease expired or unlicensed!");
-        eprintln!("   Please scan QR code on HDMI screen or contact Shambhavi AI Labs billing.");
-        return Ok(());
-    }
-    let entitled_channels = lease_guardian.max_allowed_cameras();
-    println!("✅ 24-Hour Lease Active: Authorized for {} cameras (₹250/cam/mo tier)", entitled_channels);
-
-    // 3. Load or Initialize Appliance Configuration
+    // 2. Load or Initialize Appliance Configuration
     let config = NvrConfig::load_or_default(&args.config)?;
     println!("📦 Box Identity:         {}", config.appliance.box_id);
     println!("⚙️  Hardware Tier:        {:?}", config.appliance.tier);
     println!("💾 Storage Directory:    {:?}", config.appliance.storage_dir);
     println!("📁 Evidence Directory:   {:?}", config.appliance.evidence_dir);
+
+    // 3. Universal DRM Guard & Metered Licensing Integration
+    let metrics = Arc::new(CctvGuardMetrics::new(config.cameras.len() as u32));
+    let client_id = config.appliance.client_id.clone().unwrap_or_else(|| "retail_store_patna_01".to_string());
+    let license_key = config.appliance.license_key.clone().unwrap_or_else(|| "PEHREDAR-SHAMBHAVI-24H-LEASE".to_string());
+
+    let drm = Arc::new(
+        DRMGuard::builder()
+            .client_id(client_id)
+            .license_key(license_key)
+            .heartbeat_url(Some(config.appliance.cloud_lease_endpoint.clone()))
+            .metrics_provider(metrics.clone())
+            .grace_period_hours(24)
+            .build()?,
+    );
+
+    // Initial lease validation (fail-closed)
+    let heartbeat_res = drm.perform_heartbeat().await;
+    let mut lease_guardian = LeaseGuardian::new(fingerprint.machine_hash.clone());
+
+    if drm.is_active().await {
+        let status = drm.get_status_info().await;
+        let exp_dt = chrono::DateTime::from_timestamp(status.expires_at, 0).unwrap_or_else(chrono::Utc::now);
+        lease_guardian.unlock_from_drm(config.cameras.len() as u32, exp_dt);
+        println!("✅ 24-Hour Cryptographic Lease Active: Authorized for {} cameras", lease_guardian.max_allowed_cameras());
+    } else {
+        println!("🔒 [DRM LOCKOUT] No active cryptographic lease: {:?}. Web setup portal is required for activation.", heartbeat_res.err());
+    }
+
+    // Launch background 10-minute proactive health monitoring daemon
+    drm.clone().start_background_daemon();
+
+    // 3.5. Launch TP-Link Style Embedded Web Admin & Setup Portal
+    let web_port = config.appliance.web_port;
+    let config_lock = Arc::new(RwLock::new(config.clone()));
+    web_portal::start_web_portal(config_lock, drm.clone(), metrics.clone(), web_port).await?;
+
+    lease_guardian.tick();
+    if !lease_guardian.is_authorized() {
+        eprintln!("❌ [SECURITY LOCKOUT] Appliance lease expired or unlicensed!");
+        eprintln!("   Web Admin Portal running on http://127.0.0.1:{}. Please activate lease to start monitoring.", web_port);
+        return Ok(());
+    }
+
+    let entitled_channels = lease_guardian.max_allowed_cameras();
 
     // Channel Entitlement Locking: Enforce that customer cannot attach unauthorized cameras
     let mut active_channels = Vec::new();
@@ -110,36 +144,6 @@ async fn main() -> Result<()> {
     let model_path = args.model_path.unwrap_or_else(|| config.appliance.model_path.clone());
     let model_path_str = model_path.to_string_lossy().to_string();
     println!("🧠 Vision Model Path:    {}", model_path_str);
-
-    // 3.5. Universal DRM Guard & Metered Licensing Integration
-    let metrics = Arc::new(CctvGuardMetrics::new(config.cameras.len() as u32));
-    let client_id = config.appliance.client_id.clone().unwrap_or_else(|| "retail_store_patna_01".to_string());
-    let license_key = config.appliance.license_key.clone().unwrap_or_else(|| "PEHREDAR-SHAMBHAVI-24H-LEASE".to_string());
-
-    let drm = Arc::new(
-        DRMGuard::builder()
-            .client_id(client_id)
-            .license_key(license_key)
-            .heartbeat_url(Some(config.appliance.cloud_lease_endpoint.clone()))
-            .metrics_provider(metrics.clone())
-            .grace_period_hours(24)
-            .build()?,
-    );
-
-    // Trigger initial lease validation
-    if let Err(e) = drm.perform_heartbeat().await {
-        println!(" [DRM NOTICE] Initial Cloudflare handshake: {}. Active under offline lease.", e);
-    } else {
-        println!(" [DRM SUCCESS] 24-Hour Cryptographic Lease Verified & Active.");
-    }
-
-    // Launch background 10-minute proactive health monitoring daemon
-    drm.clone().start_background_daemon();
-
-    // 3.6. Launch TP-Link Style Embedded Web Admin & Setup Portal
-    let web_port = config.appliance.web_port;
-    let config_lock = Arc::new(RwLock::new(config.clone()));
-    web_portal::start_web_portal(config_lock, drm.clone(), metrics.clone(), web_port).await?;
 
     println!("============================================================\n");
 

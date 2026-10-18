@@ -30,7 +30,19 @@ pub fn build_router(engine: Arc<LocalRagEngine>) -> Router {
         .route("/api/rag/query", post(rag_query_handler))
         .route("/api/crm/customers", get(list_customers_handler).post(upsert_customer_handler))
         .route("/api/crm/customers/:id/notes", post(add_customer_note_handler))
-        .layer(CorsLayer::permissive())
+        .layer(
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::AllowOrigin::predicate(|origin, _| {
+                    let s = origin.to_str().unwrap_or("");
+                    s.starts_with("http://localhost") || s.starts_with("http://127.0.0.1")
+                }))
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::DELETE,
+                ])
+                .allow_headers([axum::http::header::CONTENT_TYPE, axum::http::header::AUTHORIZATION]),
+        )
         .with_state(engine)
 }
 

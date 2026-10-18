@@ -347,13 +347,15 @@ impl TechnicalEngine {
             score += 0.8; // Oversold potential bounce
         }
 
-        // MACD Signal
+        // MACD Signal (Evaluate turning point crossovers before steady-state momentum levels)
         if macd.is_bullish_crossover {
             score += 1.5;
-        } else if macd.histogram > 0.0 || macd.macd_line > 0.0 {
-            score += 0.8;
         } else if macd.is_bearish_crossover {
             score -= 1.5;
+        } else if macd.histogram > 0.0 && macd.macd_line > 0.0 {
+            score += 0.8;
+        } else if macd.histogram < 0.0 && macd.macd_line < 0.0 {
+            score -= 0.8;
         }
 
         // Bollinger Bandwidth
