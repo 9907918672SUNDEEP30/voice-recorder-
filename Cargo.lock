@@ -76,6 +76,8 @@ dependencies = [
  "ort",
  "regex",
  "rubato",
+ "serde",
+ "serde_json",
  "tokenizers",
  "tokio",
  "tokio-util",
@@ -4835,6 +4837,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "text_parser",
  "zeroize",
 ]

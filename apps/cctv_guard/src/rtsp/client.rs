@@ -3,8 +3,7 @@ use anyhow::{anyhow, Result};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
+use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc;
 
 /// Configuration options for the RTSP camera ingestion engine.
@@ -111,108 +110,98 @@ impl RtspClient {
         self.is_running.store(false, Ordering::SeqCst);
     }
 
-    /// Asynchronous ingestion loop for physical RTSP streams via TCP socket.
-    /// Handles RTSP handshakes (OPTIONS, DESCRIBE, SETUP, PLAY) and interleaved data framing.
+    /// Asynchronous ingestion loop for physical RTSP streams.
+    /// Spawns real FFmpeg subprocess pipeline to decode RTSP H.264/H.265 into raw RGB24 frames.
+    /// Under zero circumstances does this produce synthetic frames in network mode.
     async fn run_network_loop(
         config: RtspClientConfig,
         tx: mpsc::Sender<CctvFrame>,
         is_running: Arc<AtomicBool>,
     ) -> Result<()> {
-        let (host, port, path) = Self::parse_rtsp_url(&config.url)?;
+        let frame_size = (config.width * config.height * 3) as usize;
 
         while is_running.load(Ordering::SeqCst) {
-            println!("[RTSP Client] Connecting to {}:{} path '{}'...", host, port, path);
-            match TcpStream::connect((host.as_str(), port)).await {
-                Ok(mut stream) => {
-                    println!("[RTSP Client] TCP connection established. Initiating RTSP handshake...");
+            println!("[RTSP Client] Launching FFmpeg native RTSP decoder for '{}'...", config.url);
 
-                    // 1. Send RTSP OPTIONS
-                    let cseq = 1;
-                    let options_req = format!(
-                        "OPTIONS {} RTSP/1.0\r\nCSeq: {}\r\nUser-Agent: AI-CCTV-Guard/1.0\r\n\r\n",
-                        config.url, cseq
-                    );
-                    if stream.write_all(options_req.as_bytes()).await.is_err() {
-                        tokio::time::sleep(Duration::from_millis(config.reconnect_delay_ms)).await;
-                        continue;
-                    }
-
-                    let mut resp_buf = vec![0u8; 4096];
-                    let _ = stream.read(&mut resp_buf).await;
-
-                    // 2. Send RTSP DESCRIBE
-                    let describe_req = format!(
-                        "DESCRIBE {} RTSP/1.0\r\nCSeq: 2\r\nAccept: application/sdp\r\nUser-Agent: AI-CCTV-Guard/1.0\r\n\r\n",
-                        config.url
-                    );
-                    let _ = stream.write_all(describe_req.as_bytes()).await;
-                    let _ = stream.read(&mut resp_buf).await;
-
-                    // 3. Send RTSP SETUP with TCP Interleaved Transport
-                    let setup_req = format!(
-                        "SETUP {}/trackID=0 RTSP/1.0\r\nCSeq: 3\r\nTransport: RTP/AVP/TCP;unicast;interleaved=0-1\r\nUser-Agent: AI-CCTV-Guard/1.0\r\n\r\n",
-                        config.url
-                    );
-                    let _ = stream.write_all(setup_req.as_bytes()).await;
-                    let _ = stream.read(&mut resp_buf).await;
-
-                    // 4. Send RTSP PLAY
-                    let play_req = format!(
-                        "PLAY {} RTSP/1.0\r\nCSeq: 4\r\nRange: npt=0.000-\r\nUser-Agent: AI-CCTV-Guard/1.0\r\n\r\n",
-                        config.url
-                    );
-                    let _ = stream.write_all(play_req.as_bytes()).await;
-
-                    println!("[RTSP Client] RTSP stream activated. Streaming interleaved RTP/H264 payload...");
-
-                    // Stream ingestion loop
-                    let mut frame_idx: u64 = 0;
-                    let start_time = Instant::now();
-                    let frame_interval = Duration::from_micros(1_000_000 / config.target_fps as u64);
-
-                    let mut interleaved_header = [0u8; 4];
-                    while is_running.load(Ordering::SeqCst) {
-                        // RTSP Interleaved Frame format:
-                        // Byte 0: '$' (0x24)
-                        // Byte 1: channel (0 for RTP video)
-                        // Bytes 2-3: 16-bit packet length in big endian
-                        if stream.read_exact(&mut interleaved_header).await.is_err() {
-                            break;
-                        }
-
-                        if interleaved_header[0] == 0x24 {
-                            let packet_len = u16::from_be_bytes([interleaved_header[2], interleaved_header[3]]) as usize;
-                            let mut packet_data = vec![0u8; packet_len];
-                            if stream.read_exact(&mut packet_data).await.is_err() {
-                                break;
-                            }
-
-                            // Generate frame representation from incoming RTP stream
-                            let timestamp_ms = start_time.elapsed().as_millis() as u64;
-                            let frame = CctvFrame::synthetic_pattern(
-                                config.width,
-                                config.height,
-                                40,
-                                40,
-                                45,
-                                timestamp_ms,
-                                frame_idx,
-                            );
-                            frame_idx += 1;
-
-                            if tx.send(frame).await.is_err() {
-                                return Ok(());
-                            }
-
-                            tokio::time::sleep(frame_interval).await;
-                        }
-                    }
-                }
+            let mut child = match tokio::process::Command::new("ffmpeg")
+                .args([
+                    "-rtsp_transport",
+                    "tcp",
+                    "-i",
+                    &config.url,
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgb24",
+                    "-s",
+                    &format!("{}x{}", config.width, config.height),
+                    "-r",
+                    &format!("{}", config.target_fps),
+                    "-an",
+                    "-sn",
+                    "-",
+                ])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+            {
+                Ok(c) => c,
                 Err(e) => {
-                    eprintln!("[RTSP Client] Connection failed: {}. Retrying in {} ms...", e, config.reconnect_delay_ms);
+                    eprintln!(
+                        "[RTSP Client] FFmpeg unavailable or failed to launch: {}. Retrying in {} ms...",
+                        e, config.reconnect_delay_ms
+                    );
                     tokio::time::sleep(Duration::from_millis(config.reconnect_delay_ms)).await;
+                    continue;
+                }
+            };
+
+            let mut stdout = match child.stdout.take() {
+                Some(s) => s,
+                None => {
+                    let _ = child.kill().await;
+                    tokio::time::sleep(Duration::from_millis(config.reconnect_delay_ms)).await;
+                    continue;
+                }
+            };
+
+            let mut frame_idx: u64 = 0;
+            let start_time = Instant::now();
+            let mut frame_buf = vec![0u8; frame_size];
+
+            while is_running.load(Ordering::SeqCst) {
+                match stdout.read_exact(&mut frame_buf).await {
+                    Ok(_) => {
+                        let timestamp_ms = start_time.elapsed().as_millis() as u64;
+                        let frame = CctvFrame::new(
+                            config.width,
+                            config.height,
+                            frame_buf.clone(),
+                            timestamp_ms,
+                            frame_idx,
+                        )?;
+                        frame_idx += 1;
+
+                        if tx.send(frame).await.is_err() {
+                            let _ = child.kill().await;
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "[RTSP Client] RTSP stream ended or decode error: {}. Reconnecting...",
+                            e
+                        );
+                        break;
+                    }
                 }
             }
+
+            let _ = child.kill().await;
+            if !is_running.load(Ordering::SeqCst) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(config.reconnect_delay_ms)).await;
         }
 
         Ok(())

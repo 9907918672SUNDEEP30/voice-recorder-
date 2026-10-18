@@ -9,7 +9,7 @@ pub mod pdf;
 
 pub use chunker::{DocumentChunk, SlidingWindowChunker};
 pub use csv_parser::CsvDocumentParser;
-pub use pdf::PdfDocumentParser;
+pub use pdf::{PdfDocumentParser, PdfParseResult};
 
 use anyhow::Result;
 

@@ -199,12 +199,16 @@ impl FinancialRatioEngine {
         };
         let pe_mean_reversion_zscore = (profile.current_pe - profile.pe_5yr_median) / pe_std;
 
-        // 6. CFO to Net Profit Ratio
+        // 6. CFO to Net Profit Ratio (MM-03: Isolate loss-making companies and negative cash flow)
         let cfo_to_net_profit = if let Some(cf) = latest_cf {
-            if latest_inc.net_profit.abs() > 0.001 {
+            if latest_inc.net_profit > 0.0 && cf.cfo > 0.0 {
                 cf.cfo / latest_inc.net_profit
+            } else if latest_inc.net_profit <= 0.0 || cf.cfo <= 0.0 {
+                // If either net profit is negative or operating cash flow is negative,
+                // mark as -1.0 so it receives a poor-cash-realization penalty rather than a false bonus
+                -1.0
             } else {
-                1.0
+                0.0
             }
         } else {
             1.0 // Neutral fallback if CF statement not yet published

@@ -47,6 +47,11 @@ pub struct ConvictionAnalyzer;
 impl ConvictionAnalyzer {
     /// Analyzes a mono f32 PCM audio slice at the given sample rate
     pub fn analyze_samples(samples: &[f32], sample_rate: f32) -> Result<AcousticConvictionMetrics> {
+        // MM-02 Guard: Enforce valid sample rate to prevent division-by-zero or infinite loop
+        if sample_rate < 8000.0 || sample_rate > 192000.0 || sample_rate.is_nan() {
+            return Err(anyhow!("Invalid sample rate {}: must be between 8,000 and 192,000 Hz", sample_rate));
+        }
+
         let n = samples.len();
         if n < (sample_rate * 0.1) as usize {
             return Err(anyhow!("Audio too short for clinical conviction analysis (min 100ms required)"));
@@ -104,60 +109,65 @@ impl ConvictionAnalyzer {
         let clamped_r = r_max.clamp(0.01, 0.999);
         let hnr_db = 10.0 * (clamped_r / (1.0 - clamped_r)).log10();
 
-        // 4. Extract individual glottal cycles for Jitter and Shimmer calculation
-        let cycle_len = best_lag;
-        let mut periods = Vec::new();
-        let mut peak_amplitudes = Vec::new();
+        // 4. Glottal cycle peak tracking for true cycle-to-cycle Jitter and Shimmer (Fix MM-01)
+        let mut glottal_peaks: Vec<(usize, f32)> = Vec::new();
+        let search_window = best_lag;
+        let mut curr = 0;
 
-        let mut offset = 0;
-        while offset + cycle_len < n {
-            let cycle = &samples[offset..offset + cycle_len];
-            let mut max_val = 0.0f32;
+        while curr + search_window <= n {
+            let window_end = (curr + search_window).min(n);
+            let mut local_max_val = 0.0f32;
+            let mut local_max_idx = curr;
 
-            for &s in cycle.iter() {
-                if s.abs() > max_val {
-                    max_val = s.abs();
+            for i in curr..window_end {
+                let abs_val = samples[i].abs();
+                if abs_val > local_max_val {
+                    local_max_val = abs_val;
+                    local_max_idx = i;
                 }
             }
 
-            periods.push(cycle_len as f32);
-            peak_amplitudes.push(max_val);
-            offset += cycle_len;
+            if local_max_val > 0.001 {
+                glottal_peaks.push((local_max_idx, local_max_val));
+            }
+
+            // Advance by approximately one pitch period from the detected peak
+            curr = local_max_idx + (search_window * 3 / 4).max(1);
         }
 
-        // 5. Calculate Local Jitter %
-        let jitter_pct = if periods.len() >= 3 {
-            let mut diff_sum = 0.0f32;
-            let mut mean_p = 0.0f32;
-            for i in 0..periods.len() {
-                mean_p += periods[i];
-                if i + 1 < periods.len() {
-                    diff_sum += (periods[i] - periods[i + 1]).abs();
+        // Cycle periods and peak amplitudes
+        let mut periods: Vec<f32> = Vec::new();
+        let mut peak_amplitudes: Vec<f32> = Vec::new();
+
+        for i in 0..glottal_peaks.len() {
+            peak_amplitudes.push(glottal_peaks[i].1);
+            if i + 1 < glottal_peaks.len() {
+                let period = (glottal_peaks[i + 1].0 - glottal_peaks[i].0) as f32;
+                // Filter out octave jumps (must be within 0.5x to 2.0x of nominal best_lag)
+                if period >= (best_lag as f32 * 0.5) && period <= (best_lag as f32 * 2.0) {
+                    periods.push(period);
                 }
             }
-            mean_p /= periods.len() as f32;
+        }
+
+        // 5. Calculate Local Jitter % (true cycle-to-cycle lag-1 difference)
+        let jitter_pct = if periods.len() >= 2 {
+            let diff_sum: f32 = periods.windows(2).map(|w| (w[1] - w[0]).abs()).sum();
+            let mean_p: f32 = periods.iter().sum::<f32>() / periods.len() as f32;
             let avg_diff = diff_sum / (periods.len() - 1) as f32;
-            ((avg_diff / mean_p.max(1e-6)) * 100.0).clamp(0.1, 15.0)
+            ((avg_diff / mean_p.max(1e-6)) * 100.0).clamp(0.05, 15.0)
         } else {
-            // Simulated default for very short frames
-            (1.0 - clamped_r) * 5.0
+            ((1.0 - clamped_r) * 5.0).clamp(0.1, 10.0)
         };
 
-        // 6. Calculate Local Shimmer %
-        let shimmer_pct = if peak_amplitudes.len() >= 3 {
-            let mut diff_sum = 0.0f32;
-            let mut mean_a = 0.0f32;
-            for i in 0..peak_amplitudes.len() {
-                mean_a += peak_amplitudes[i];
-                if i + 1 < peak_amplitudes.len() {
-                    diff_sum += (peak_amplitudes[i] - peak_amplitudes[i + 1]).abs();
-                }
-            }
-            mean_a /= peak_amplitudes.len() as f32;
+        // 6. Calculate Local Shimmer % (cycle-to-cycle amplitude perturbation)
+        let shimmer_pct = if peak_amplitudes.len() >= 2 {
+            let diff_sum: f32 = peak_amplitudes.windows(2).map(|w| (w[1] - w[0]).abs()).sum();
+            let mean_a: f32 = peak_amplitudes.iter().sum::<f32>() / peak_amplitudes.len() as f32;
             let avg_diff = diff_sum / (peak_amplitudes.len() - 1) as f32;
-            ((avg_diff / mean_a.max(1e-6)) * 100.0).clamp(0.5, 25.0)
+            ((avg_diff / mean_a.max(1e-6)) * 100.0).clamp(0.2, 25.0)
         } else {
-            (1.0 - clamped_r) * 10.0
+            ((1.0 - clamped_r) * 10.0).clamp(0.5, 20.0)
         };
 
         // 7. Composite Conviction Score (0.0 to 100.0)

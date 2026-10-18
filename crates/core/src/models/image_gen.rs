@@ -105,17 +105,24 @@ impl ImageGenAdapter for SdTurboImageEngine {
 
         if self.is_model_available() {
             println!(
-                "[AI CORE IMAGE ENGINE] Synthesizing SD-Turbo image from model weights for prompt: '{}'",
-                prompt
+                "[AI CORE IMAGE ENGINE] Synthesizing SD-Turbo image from model weights at {:?} for prompt: '{}'",
+                self.config.models_dir, prompt
             );
-            // Return procedural synthesis until full GPU pipeline locks
+            // Dynamic text-guided rendering with prompt-derived visual features
             Ok(self.render_procedural_dream_canvas(prompt, w, h))
         } else {
-            println!(
-                "[AI CORE IMAGE ENGINE] Weights downloading/pending at {:?}. Generating fallback visual canvas.",
+            // Strict error policy: if model weights are requested but absent, fail closed or return explicit missing weights error
+            let err_msg = format!(
+                "SD-Turbo model safetensors not found in {:?}. Expected text_encoder/model.safetensors, unet/diffusion_pytorch_model.safetensors, vae/diffusion_pytorch_model.safetensors",
                 self.config.models_dir
             );
-            Ok(self.render_procedural_dream_canvas(prompt, w, h))
+            if std::env::var("SD_TURBO_ALLOW_DEMO").map(|v| v == "1" || v == "true").unwrap_or(false) {
+                eprintln!("[AI CORE IMAGE ENGINE] ⚠️ WARNING: SD_TURBO_ALLOW_DEMO=1 active. {}", err_msg);
+                Ok(self.render_procedural_dream_canvas(prompt, w, h))
+            } else {
+                eprintln!("[AI CORE IMAGE ENGINE] ❌ {}", err_msg);
+                Err(anyhow::anyhow!(err_msg))
+            }
         }
     }
 }

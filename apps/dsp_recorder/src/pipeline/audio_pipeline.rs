@@ -223,27 +223,48 @@ impl StudioAudioPipeline {
                         let rms = (sum_sq / chunk.len() as f32).sqrt();
                         let rms_db = if rms > 1e-5 { 20.0 * rms.log10() } else { -96.0 };
 
-                        // 2. Voice Activity Detection (if configured)
-                        let mut is_speech = true;
-                        let mut speech_prob = 1.0f32;
+                        // 2. Voice Activity Detection (Fix M-07: Fail-Closed on Error)
+                        let mut is_speech = match mode {
+                            PipelineMode::Continuous => true,
+                            PipelineMode::VadGated => false, // Default fail-closed in VadGated mode
+                        };
+                        let mut speech_prob = if mode == PipelineMode::Continuous { 1.0f32 } else { 0.0f32 };
 
                         if let (Some(ref mut vad), Some(ref mut resampler)) =
                             (&mut vad_opt, &mut resampler_opt)
                         {
-                            if let Ok(resampled_16k) = resampler.resample(&chunk) {
-                                // Convert f32 samples to 16-bit PCM bytes for Silero VAD
-                                let mut pcm_bytes = Vec::with_capacity(resampled_16k.len() * 2);
-                                for &sample in &resampled_16k {
-                                    let s16 = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
-                                    pcm_bytes.extend_from_slice(&s16.to_le_bytes());
-                                }
-
-                                // Run VAD chunk classification synchronously on persistent worker runtime
-                                if let Some(ref rt) = vad_runtime {
-                                    if let Ok((active, prob)) = rt.block_on(vad.process_chunk(&pcm_bytes)) {
-                                        is_speech = active && prob >= vad_threshold;
-                                        speech_prob = prob;
+                            match resampler.resample(&chunk) {
+                                Ok(resampled_16k) => {
+                                    // Convert f32 samples to 16-bit PCM bytes for Silero VAD
+                                    let mut pcm_bytes = Vec::with_capacity(resampled_16k.len() * 2);
+                                    for &sample in &resampled_16k {
+                                        let s16 = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+                                        pcm_bytes.extend_from_slice(&s16.to_le_bytes());
                                     }
+
+                                    // Run VAD chunk classification synchronously on persistent worker runtime
+                                    if let Some(ref rt) = vad_runtime {
+                                        match rt.block_on(vad.process_chunk(&pcm_bytes)) {
+                                            Ok((active, prob)) => {
+                                                is_speech = active && prob >= vad_threshold;
+                                                speech_prob = prob;
+                                            }
+                                            Err(e) => {
+                                                eprintln!("[DSP PIPELINE VAD ERROR] VAD classification error: {}. Failing closed (recording paused).", e);
+                                                is_speech = false;
+                                                speech_prob = 0.0;
+                                            }
+                                        }
+                                    } else {
+                                        eprintln!("[DSP PIPELINE VAD ERROR] Tokio runtime unavailable for VAD. Failing closed.");
+                                        is_speech = false;
+                                        speech_prob = 0.0;
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("[DSP PIPELINE VAD ERROR] Resampler failure: {}. Failing closed.", e);
+                                    is_speech = false;
+                                    speech_prob = 0.0;
                                 }
                             }
                         }

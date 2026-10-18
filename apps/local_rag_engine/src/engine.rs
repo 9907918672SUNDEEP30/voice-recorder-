@@ -265,7 +265,12 @@ impl LocalRagEngine {
     }
 
     /// Lists all unique document IDs
-    pub fn list_documents(&self) -> Result<Vec<String>> {
-        self.vault.list_document_ids()
+    pub async fn list_documents(&self) -> Result<Vec<String>> {
+        let session_key = self
+            .drm
+            .get_session_key()
+            .await
+            .ok_or_else(|| anyhow!("DRM lease is expired or inactive. Document vault is locked."))?;
+        self.vault.list_document_ids(&session_key)
     }
 }

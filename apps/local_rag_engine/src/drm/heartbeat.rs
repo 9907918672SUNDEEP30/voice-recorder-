@@ -8,7 +8,6 @@ use anyhow::{anyhow, Result};
 use chrono::Utc;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -202,36 +201,62 @@ impl DrmGuard {
         }
 
         // Offline / Autonomous Evaluation:
-        // If Worker URL is not configured or offline, check if current license_key is authorized
-        // and grant a 24-hour deterministic local session key bound to machine_uuid.
-        if !self.license_key.is_empty() {
-            let lease_duration = 86400; // 24 hours
-            let expires_at = now + lease_duration;
-            
-            // Derive deterministic 32-byte session key from (license_key + machine_uuid + 24h_window)
-            let window_slot = now / lease_duration;
-            let mut hasher = Sha256::new();
-            hasher.update(self.license_key.as_bytes());
-            hasher.update(self.fingerprint.machine_uuid.as_bytes());
-            hasher.update(window_slot.to_le_bytes());
-            let key_bytes: [u8; 32] = hasher.finalize().into();
-            let session_key = SessionKey::from_bytes(key_bytes);
+        // FAIL-CLOSED: No arbitrary string may ever generate a valid session key.
+        // Offline execution is strictly permitted ONLY if an unexpired, server-signed lease
+        // with valid Ed25519 root signature is present on disk for this machine.
+        let lease_path = std::env::temp_dir().join(".shambhavi_lease_local_rag_engine.json");
+        if let Ok(cache_data) = std::fs::read_to_string(&lease_path) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&cache_data) {
+                let expires_at = val["expires_at"].as_i64().unwrap_or(0);
+                let machine_uuid = val["machine_uuid"].as_str().unwrap_or("");
+                let app_name = val["app_name"].as_str().unwrap_or("");
+                let sig_hex = val["signature_hex"].as_str().unwrap_or("");
 
-            let mut st = self.state.write().await;
-            st.status = LicenseStatus::Active;
-            st.expires_at = expires_at;
-            st.session_key = Some(session_key);
-            st.last_verified_ts = now;
+                let canonical_msg = format!(
+                    "{}:{}:{}:{}:{}:",
+                    val["client_id"].as_str().unwrap_or(""),
+                    machine_uuid,
+                    app_name,
+                    expires_at,
+                    val["nonce"].as_str().unwrap_or("")
+                );
 
-            println!(
-                "[DRM GUARD] 24-Hour Lease successfully activated. Valid until: {} (Bound to UUID: {})",
-                expires_at, self.fingerprint.machine_uuid
-            );
-            Ok(())
-        } else {
-            self.invalidate_and_zeroize(LicenseStatus::Unlicensed).await;
-            Err(anyhow!("No valid license key provided."))
+                const ROOT_KEY: &str = "82d9651fdb75e85ab7e88c35440e4c7629b53b97c9fbfdf2335a6cb458af1400";
+                let sig_valid = if let (Ok(pub_b), Ok(sig_b)) = (hex::decode(ROOT_KEY), hex::decode(sig_hex)) {
+                    if pub_b.len() == 32 && sig_b.len() == 64 {
+                        let mut pk = [0u8; 32];
+                        let mut sk = [0u8; 64];
+                        pk.copy_from_slice(&pub_b);
+                        sk.copy_from_slice(&sig_b);
+                        if let (Ok(vk), sig) = (ed25519_dalek::VerifyingKey::from_bytes(&pk), ed25519_dalek::Signature::from_bytes(&sk)) {
+                            use ed25519_dalek::Verifier;
+                            vk.verify(canonical_msg.as_bytes(), &sig).is_ok()
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if sig_valid && machine_uuid == self.fingerprint.machine_uuid && app_name == "local_rag_engine" && expires_at > now {
+                    self.apply_lease(expires_at, None).await?;
+                    println!(
+                        "[DRM GUARD] Verified server-signed offline lease active until: {} (Remaining: {}s)",
+                        expires_at, expires_at - now
+                    );
+                    return Ok(());
+                }
+            }
         }
+
+        self.invalidate_and_zeroize(LicenseStatus::Expired).await;
+        Err(anyhow!(
+            "[DRM SECURITY] Fail-Closed: No valid server-signed Ed25519 lease available. \
+            Connection to licensing endpoint required for initial activation or lease renewal."
+        ))
     }
 
     async fn apply_lease(&self, expires_at: i64, key_hex: Option<&str>) -> Result<()> {

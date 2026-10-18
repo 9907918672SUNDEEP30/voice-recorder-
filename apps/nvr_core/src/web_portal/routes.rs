@@ -3,15 +3,17 @@
 use super::html::PORTAL_HTML;
 use crate::config::{CameraConfig, NvrConfig};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Request, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Json},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Json, Response},
     routing::{delete, get, post},
     Router,
 };
 use drm_guard::{CctvGuardMetrics, DRMGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -24,20 +26,89 @@ pub struct WebPortalState {
     pub auto_update_enabled: Arc<AtomicBool>,
     pub last_ota_check: Arc<RwLock<Option<String>>>,
     pub start_time: std::time::Instant,
+    /// 256-bit random session token — memory-only, set at first startup.
+    /// Required as `Authorization: Bearer <token>` on all mutating admin routes.
+    pub admin_session_token: String,
+}
+
+impl WebPortalState {
+    /// Generate a cryptographically secure 256-bit admin session token.
+    pub fn generate_admin_token() -> String {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let mut hasher = Sha256::new();
+        hasher.update(std::process::id().to_le_bytes());
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        hasher.update(nanos.to_le_bytes());
+        let hash = hasher.finalize();
+        hash.iter().map(|b| format!("{:02x}", b)).collect()
+    }
+}
+
+/// Axum middleware: validates `Authorization: Bearer <token>` header on admin routes.
+async fn admin_auth_middleware(
+    State(state): State<Arc<WebPortalState>>,
+    req: Request,
+    next: Next,
+) -> Response {
+    let auth_header = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let expected = format!("Bearer {}", state.admin_session_token);
+
+    // Constant-time comparison to prevent timing oracle attacks
+    if !constant_time_eq(auth_header.as_bytes(), expected.as_bytes()) {
+        eprintln!("[NVR ADMIN AUTH] Rejected unauthorized admin request — invalid or missing Bearer token");
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "Unauthorized",
+                "message": "Valid Authorization: Bearer <token> required for admin operations."
+            })),
+        )
+            .into_response();
+    }
+
+    next.run(req).await
+}
+
+/// Constant-time byte comparison to prevent timing-based token oracle attacks.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 pub fn build_router(state: Arc<WebPortalState>) -> Router {
-    Router::new()
+    // Read-only / setup routes — no auth required (setup wizard needs these)
+    let public_routes = Router::new()
         .route("/", get(serve_portal))
         .route("/api/status", get(get_status_handler))
         .route("/api/cameras", get(list_cameras_handler))
+        .route("/api/license/activate", post(activate_license_handler))
+        .route("/api/ota/check", post(check_ota_handler));
+
+    // Mutating admin routes — all require valid Bearer token
+    let admin_routes = Router::new()
         .route("/api/cameras/add", post(add_camera_handler))
         .route("/api/cameras/:id/toggle", post(toggle_camera_handler))
         .route("/api/cameras/:id", delete(delete_camera_handler))
-        .route("/api/license/activate", post(activate_license_handler))
-        .route("/api/ota/check", post(check_ota_handler))
         .route("/api/ota/toggle_auto", post(toggle_auto_update_handler))
         .route("/api/ota/apply", post(apply_ota_handler))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            admin_auth_middleware,
+        ));
+
+    Router::new()
+        .merge(public_routes)
+        .merge(admin_routes)
         .layer(
             CorsLayer::new()
                 .allow_origin(tower_http::cors::AllowOrigin::predicate(|origin, _| {
@@ -53,6 +124,7 @@ pub fn build_router(state: Arc<WebPortalState>) -> Router {
         )
         .with_state(state)
 }
+
 
 fn redact_rtsp_url(url: &str) -> String {
     if let Some(at_idx) = url.find('@') {

@@ -9,8 +9,9 @@ use tokio::sync::Mutex;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Query, State,
     },
+    http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::get,
     Router,
@@ -18,11 +19,32 @@ use axum::{
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use base64::{Engine as _, engine::general_purpose::STANDARD as b64};
+use serde::Deserialize;
 
 use crate::pipeline::PipelineOrchestrator;
 use crate::codec::G711Codec;
 use crate::supabase::SupabaseClient;
 use ai_core::models::adapters::{VADAdapter, SttAdapter, LlmAdapter, TtsAdapter};
+
+/// Sanitizes a stream ID against directory traversal and control characters.
+/// Only alphanumeric, '-', and '_' are permitted. Max 64 characters.
+pub fn sanitize_stream_id(raw: &str) -> Result<String, &'static str> {
+    let clean: String = raw
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .take(64)
+        .collect();
+    if clean.is_empty() {
+        return Err("Stream ID contains no valid characters");
+    }
+    Ok(clean)
+}
+
+#[derive(Deserialize, Default)]
+pub struct WsAuthParams {
+    pub token: Option<String>,
+    pub signature: Option<String>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -70,7 +92,45 @@ async fn test_client_handler() -> Html<&'static str> {
     Html(include_str!("../test_client.html"))
 }
 
-async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    headers: HeaderMap,
+    Query(params): Query<WsAuthParams>,
+    State(state): State<AppState>,
+) -> Response {
+    // H-04: Validate caller authentication if VOICE_GATEWAY_SECRET or TWILIO_AUTH_TOKEN is configured
+    let expected_secret = std::env::var("VOICE_GATEWAY_SECRET")
+        .or_else(|_| std::env::var("TWILIO_AUTH_TOKEN"))
+        .ok();
+
+    if let Some(secret) = expected_secret {
+        let auth_header = headers
+            .get("authorization")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer ").or_else(|| s.strip_prefix("bearer ")));
+        let sig_header = headers
+            .get("x-provider-signature")
+            .or_else(|| headers.get("x-twilio-signature"))
+            .and_then(|h| h.to_str().ok());
+        let token_param = params.token.as_deref().or(params.signature.as_deref());
+
+        let authenticated = match (auth_header, sig_header, token_param) {
+            (Some(bearer), _, _) if bearer == secret => true,
+            (_, Some(sig), _) if sig == secret => true,
+            (_, _, Some(tok)) if tok == secret => true,
+            _ => false,
+        };
+
+        if !authenticated {
+            eprintln!("[Telephony Security] 🛑 WebSocket connection rejected: Missing or invalid caller credentials.");
+            return (
+                StatusCode::UNAUTHORIZED,
+                "Unauthorized: Invalid or missing X-Provider-Signature / Bearer token",
+            )
+                .into_response();
+        }
+    }
+
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
@@ -110,17 +170,29 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                 println!("📞 [Telephony] Connected frame received: protocol={}", val["protocol"]);
                             }
                             "start" => {
-                                let stream_sid = val["streamSid"].as_str()
+                                let raw_stream_sid = val["streamSid"].as_str()
                                     .or_else(|| val["start"]["streamSid"].as_str())
                                     .unwrap_or("browser_stream_1");
-                                let call_sid = val["start"]["callSid"].as_str().unwrap_or("call_direct");
+                                let stream_sid = match sanitize_stream_id(raw_stream_sid) {
+                                    Ok(clean) => clean,
+                                    Err(e) => {
+                                        eprintln!("[Telephony Security] 🛑 Invalid streamSid {:?}: {}, generating safe fallback", raw_stream_sid, e);
+                                        let nanos = std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .subsec_nanos();
+                                        format!("stream_{:08x}", nanos)
+                                    }
+                                };
+                                let raw_call_sid = val["start"]["callSid"].as_str().unwrap_or("call_direct");
+                                let call_sid = sanitize_stream_id(raw_call_sid).unwrap_or_else(|_| "call_direct".to_string());
                                 let caller = val["start"]["customParameters"]["caller"].as_str()
                                     .or_else(|| val["start"]["from"].as_str());
                                 let name = val["start"]["customParameters"]["name"].as_str()
                                     .or_else(|| val["start"]["callerName"].as_str());
 
                                 println!("🚀 [Telephony] Call Started! StreamSid: {}, CallSid: {}, Caller: {:?}", stream_sid, call_sid, caller);
-                                orchestrator_recv.set_call_metadata(stream_sid, call_sid, caller, name).await;
+                                orchestrator_recv.set_call_metadata(&stream_sid, &call_sid, caller, name).await;
                                 // Immediately trigger initial greeting (Divya speaks first!)
                                 orchestrator_recv.clone().trigger_initial_greeting();
                             }

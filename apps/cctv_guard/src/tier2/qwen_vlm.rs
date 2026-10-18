@@ -41,6 +41,10 @@ pub struct ThreatAssessment {
     pub confidence: f32,
     pub description: String,
     pub inference_time_ms: u64,
+    #[serde(default)]
+    pub uncertain: bool,
+    #[serde(default)]
+    pub spatial_concentration: f32,
 }
 
 /// Qwen2-VL 2B (quantized 4-bit ONNX) Vision-Language inference engine.
@@ -209,35 +213,40 @@ impl QwenVlmEngine {
         // Calculate spatial feature concentration (high localized activation indicates localized target/intruder/tool)
         let max_patch_energy = patch_energies.iter().copied().fold(0.0f32, f32::max);
         let anomaly_ratio = max_patch_energy / (mean_energy + 1e-4);
+        let spatial_concentration = anomaly_ratio;
 
-        // Map vision feature statistics to threat assessment
-        let (threat_level, category, description, confidence) = if anomaly_ratio > 1.8 || std_dev > 5.0 {
+        // Calibrated threat assessment: avoid classifying normal variance as intruder
+        let (threat_level, category, description, confidence, uncertain) = if anomaly_ratio > 2.0 && std_dev > 6.0 {
             (
                 ThreatLevel::Critical,
                 ThreatCategory::Intruder,
-                "CRITICAL: Forced entry / roller shutter breach detected by VLM vision model.".to_string(),
-                (0.85 + (anomaly_ratio - 1.8).min(0.14)).min(0.99),
+                "CRITICAL: High-confidence localized perimeter breach / forced entry detected by VLM vision model.".to_string(),
+                (0.88 + (anomaly_ratio - 2.0).min(0.10)).min(0.99),
+                false,
             )
-        } else if anomaly_ratio > 1.4 || std_dev > 3.0 {
+        } else if anomaly_ratio > 1.6 && std_dev > 3.8 {
             (
                 ThreatLevel::Suspicious,
                 ThreatCategory::Intruder,
-                "SUSPICIOUS: Concealed face / suspicious individual lingering near entrance.".to_string(),
+                "SUSPICIOUS: Localized focal anomaly near sensitive zone detected by VLM vision model.".to_string(),
                 0.78,
+                true, // Marked uncertain for operator verification
             )
-        } else if mean_energy > 25.0 {
+        } else if mean_energy > 28.0 && std_dev < 3.0 {
             (
                 ThreatLevel::Safe,
                 ThreatCategory::PackageDelivery,
-                "SAFE: Legitimate delivery courier activity confirmed by VLM vision model.".to_string(),
-                0.88,
+                "SAFE: Diffuse normal activity / authorized courier profile confirmed by VLM vision model.".to_string(),
+                0.86,
+                false,
             )
         } else {
             (
                 ThreatLevel::Safe,
                 ThreatCategory::FalseAlarm,
-                "SAFE: Ambient light shift or normal activity. No threat detected.".to_string(),
-                0.95,
+                "SAFE: Low spatial concentration. Ambient or benign environmental activity.".to_string(),
+                0.94,
+                false,
             )
         };
 
@@ -247,6 +256,8 @@ impl QwenVlmEngine {
             confidence,
             description,
             inference_time_ms: elapsed_ms,
+            uncertain,
+            spatial_concentration,
         })
     }
 }

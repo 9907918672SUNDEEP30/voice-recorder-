@@ -22,9 +22,17 @@ struct Args {
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
 
-    /// Bind IP address
+    /// Bind IP address (default 127.0.0.1 loopback)
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
+
+    /// Explicit authorization flag required to bind to non-loopback network addresses
+    #[arg(long, default_value_t = false)]
+    allow_external: bool,
+
+    /// Master API Key for REST endpoints (or auto-read from RAG_API_KEY env var)
+    #[arg(long)]
+    api_key: Option<String>,
 
     /// Directory containing local ONNX models (bge_small_embedding, qwen2-vl-2b)
     #[arg(short, long, default_value = "C:/AI_Models")]
@@ -59,6 +67,19 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
+
+    // H-10 Loopback Binding Guard: strictly refuse non-loopback bind without --allow-external
+    let is_loopback = args.host == "127.0.0.1" || args.host == "localhost" || args.host == "::1";
+    if !is_loopback && !args.allow_external {
+        eprintln!("🛑 [SECURITY ERROR] Refusing to bind Local RAG Vault to external interface '{}'.", args.host);
+        eprintln!("   Local RAG Engine contains confidential enterprise documents.");
+        eprintln!("   To intentionally expose on LAN/WAN, you MUST pass '--allow-external'.");
+        return Err(anyhow::anyhow!("Non-loopback bind prohibited without '--allow-external' flag"));
+    }
+
+    if let Some(key) = &args.api_key {
+        std::env::set_var("RAG_API_KEY", key);
+    }
 
     println!("=================================================================");
     println!("     PURE RUST LOCAL RAG DOCUMENT SEARCH & SME CRM VAULT        ");

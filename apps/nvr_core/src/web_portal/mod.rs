@@ -23,6 +23,7 @@ pub async fn start_web_portal(
     metrics: Arc<CctvGuardMetrics>,
     port: u16,
 ) -> Result<()> {
+    let admin_session_token = WebPortalState::generate_admin_token();
     let state = Arc::new(WebPortalState {
         config,
         drm_guard,
@@ -30,9 +31,10 @@ pub async fn start_web_portal(
         auto_update_enabled: Arc::new(AtomicBool::new(true)),
         last_ota_check: Arc::new(RwLock::new(None)),
         start_time: std::time::Instant::now(),
+        admin_session_token,
     });
 
-    let app = build_router(state);
+    let app = build_router(state.clone());
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     println!("🌐 [TP-LINK WEB PORTAL] Starting Embedded Setup Server on http://0.0.0.0:{}", port);

@@ -52,8 +52,59 @@ pub struct ValuationReRatingEngine;
 impl ValuationReRatingEngine {
     /// Computes full forward multi-scenario projections and institutional blind-spot index
     pub fn compute_projections(ticker: &str, input: ValuationInput) -> ForwardValuationProjection {
-        let t_eps = input.trailing_eps.max(0.1);
         let curr_p = input.current_price.max(1.0);
+        let t_eps = input.trailing_eps;
+
+        // MM-03 Loss-Making Isolation Guard:
+        // Negative or zero trailing EPS indicates loss-making operations.
+        // S-Curve PE multiple expansion is invalid for loss-making companies.
+        if t_eps <= 0.0 {
+            let bear_target = (curr_p * 0.5 * 100.0).round() / 100.0;
+            let bear_case = ValuationScenarioOutput {
+                scenario_name: "Bear Case (Continued Cash Burn / Share Dilution)".to_string(),
+                forward_3yr_eps: (t_eps * 1.5 * 100.0).round() / 100.0,
+                projected_exit_pe: 0.0,
+                target_price: bear_target,
+                upside_potential_pct: -50.0,
+                cagr_pct: Self::compute_3yr_cagr(curr_p, bear_target),
+            };
+
+            let base_case = ValuationScenarioOutput {
+                scenario_name: "Base Case (Break-Even Trajectory / Operational Restructuring)".to_string(),
+                forward_3yr_eps: 0.0,
+                projected_exit_pe: 0.0,
+                target_price: curr_p,
+                upside_potential_pct: 0.0,
+                cagr_pct: 0.0,
+            };
+
+            let bull_target = (curr_p * 1.35 * 100.0).round() / 100.0;
+            let bull_supercycle = ValuationScenarioOutput {
+                scenario_name: "Turnaround Speculative Case (Turnaround to Modest Profitability)".to_string(),
+                forward_3yr_eps: 1.0,
+                projected_exit_pe: 15.0,
+                target_price: bull_target,
+                upside_potential_pct: 35.0,
+                cagr_pct: Self::compute_3yr_cagr(curr_p, bull_target),
+            };
+
+            return ForwardValuationProjection {
+                ticker: ticker.to_string(),
+                current_price: curr_p,
+                current_trailing_pe: 0.0,
+                trailing_eps: t_eps,
+                bear_case,
+                base_case,
+                bull_supercycle,
+                institutional_blind_spot_score: 0.0,
+                is_institutional_blind_spot: false,
+                statutory_disclaimer: format!(
+                    "RESEARCH & QUANTITATIVE SCENARIO SIMULATION ONLY: [ALERT: {} is currently loss-making with trailing EPS of {:.2}. Trailing P/E is N/A.]",
+                    ticker, t_eps
+                ),
+            };
+        }
+
         let curr_pe = (curr_p / t_eps).max(1.0);
 
         // 1. Bear Case: S-Curve stall, margins contract, PE compresses by 20%

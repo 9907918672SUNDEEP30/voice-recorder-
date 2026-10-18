@@ -97,7 +97,12 @@ impl VectorIndex {
 
     /// Clears and zeroizes all vector entries from RAM (used during DRM lockout)
     pub fn clear(&self) {
+        use zeroize::Zeroize;
         let mut entries = self.entries.write().unwrap();
+        for entry in entries.iter_mut() {
+            entry.normalized_vector.zeroize();
+            entry.chunk_id.zeroize();
+        }
         entries.clear();
         entries.shrink_to_fit();
     }

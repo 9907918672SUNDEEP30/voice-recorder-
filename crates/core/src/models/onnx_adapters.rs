@@ -55,36 +55,47 @@ impl VADAdapter for SileroVadLocal {
             return Ok((false, 0.0));
         }
 
-        // Silero VAD v4/v5 expects 512 samples for 16kHz audio
-        f32_samples.resize(512, 0.0);
-
-        let audio_tensor = Tensor::from_array(([1usize, 512usize], f32_samples.into_boxed_slice()))?;
-        let state_tensor = Tensor::from_array((
-            [2usize, 1usize, 128usize],
-            self.state_tensor.clone().into_boxed_slice(),
-        ))?;
-        let sr_tensor = Tensor::from_array(([1usize], vec![16000i64].into_boxed_slice()))?;
-
+        let mut max_prob: f32 = 0.0;
         let mut session_guard = self
             .session
             .lock()
             .map_err(|e| anyhow::anyhow!("VAD session lock error: {}", e))?;
-        let inputs = ort::inputs![
-            "input" => audio_tensor,
-            "state" => state_tensor,
-            "sr" => sr_tensor,
-        ];
 
-        let outputs = session_guard.run(inputs)?;
-        let prob_view = outputs["output"].try_extract_array::<f32>()?;
-        let prob = prob_view[[0, 0]];
+        // Silero VAD v4/v5 expects strictly 512 samples per frame for 16kHz audio.
+        // Process arbitrary-length input buffers via sequential 512-sample chunks,
+        // maintaining recurrent LSTM hidden states and tracking maximum speech probability.
+        const VAD_CHUNK: usize = 512;
+        for chunk in f32_samples.chunks(VAD_CHUNK) {
+            let mut chunk_buf = vec![0.0f32; VAD_CHUNK];
+            chunk_buf[..chunk.len()].copy_from_slice(chunk);
 
-        if let Ok(new_state) = outputs["stateN"].try_extract_array::<f32>() {
-            self.state_tensor = new_state.iter().copied().collect();
+            let audio_tensor = Tensor::from_array(([1usize, VAD_CHUNK], chunk_buf.into_boxed_slice()))?;
+            let state_tensor = Tensor::from_array((
+                [2usize, 1usize, 128usize],
+                self.state_tensor.clone().into_boxed_slice(),
+            ))?;
+            let sr_tensor = Tensor::from_array(([1usize], vec![16000i64].into_boxed_slice()))?;
+
+            let inputs = ort::inputs![
+                "input" => audio_tensor,
+                "state" => state_tensor,
+                "sr" => sr_tensor,
+            ];
+
+            let outputs = session_guard.run(inputs)?;
+            let prob_view = outputs["output"].try_extract_array::<f32>()?;
+            let prob = prob_view[[0, 0]];
+            if prob > max_prob {
+                max_prob = prob;
+            }
+
+            if let Ok(new_state) = outputs["stateN"].try_extract_array::<f32>() {
+                self.state_tensor = new_state.iter().copied().collect();
+            }
         }
 
-        let is_speaking = prob > 0.5;
-        Ok((is_speaking, prob))
+        let is_speaking = max_prob > 0.5;
+        Ok((is_speaking, max_prob))
     }
 }
 

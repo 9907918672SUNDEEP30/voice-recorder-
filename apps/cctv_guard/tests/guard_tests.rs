@@ -158,6 +158,8 @@ fn test_evidence_vault_logging_and_snapshots() {
         confidence: 0.96,
         description: "Intruder attempting forced entry with crowbar".to_string(),
         inference_time_ms: 15,
+        uncertain: false,
+        spatial_concentration: 2.1,
     };
 
     let record = vault

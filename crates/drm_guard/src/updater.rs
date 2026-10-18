@@ -174,19 +174,34 @@ impl OtaUpdater {
             ));
         }
 
-        // 2. Cryptographic Ed25519 signature verification against embedded root public key
-        if let Some(sig_hex) = &metadata.signature_hex {
-            crate::guard::verify_ed25519_signature(
-                crate::guard::ROOT_ED25519_PUBLIC_KEY_HEX,
-                &metadata.sha256,
-                sig_hex,
-            ).context("OTA Binary Ed25519 signature verification failed")?;
-
-            println!(
-                "[OTA UPDATER] Ed25519 cryptographic signature verified for v{}",
+        // 2. Mandatory Ed25519 signature verification — NO optional path, NO feature flag.
+        //    An absent or invalid signature unconditionally aborts the update and deletes
+        //    the downloaded bytes. SHA-256 alone is insufficient: a supply-chain attacker
+        //    can provide a matching hash for a malicious binary.
+        let sig_hex = metadata.signature_hex.as_deref().ok_or_else(|| {
+            anyhow!(
+                "[OTA SECURITY] CRITICAL: Update v{} rejected — Ed25519 signature absent. \
+                All OTA binaries MUST carry a server-signed Ed25519 signature. \
+                Unsigned binary discarded.",
                 metadata.version_available
-            );
-        }
+            )
+        })?;
+
+        crate::guard::verify_ed25519_signature(
+            crate::guard::ROOT_ED25519_PUBLIC_KEY_HEX,
+            &metadata.sha256,
+            sig_hex,
+        )
+        .context(
+            "[OTA SECURITY] Ed25519 signature verification FAILED — binary rejected and discarded. \
+            Possible supply-chain tampering detected.",
+        )?;
+
+        tracing::info!(
+            "[OTA UPDATER] ✅ Ed25519 signature verified for v{} ({} bytes)",
+            metadata.version_available,
+            bytes.len()
+        );
 
         println!(
             "[OTA UPDATER] SHA-256 integrity verified successfully for v{} ({} bytes)",

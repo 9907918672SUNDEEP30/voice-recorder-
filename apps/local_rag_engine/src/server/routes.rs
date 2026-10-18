@@ -6,9 +6,10 @@
 use super::super::crm::CustomerRecord;
 use super::super::engine::LocalRagEngine;
 use axum::{
-    extract::{Multipart, Path, State},
+    extract::{Multipart, Path, Request, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Json},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Json, Response},
     routing::{get, post},
     Router,
 };
@@ -17,19 +18,52 @@ use serde_json::json;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
+/// Middleware enforcing X-Rag-Api-Key or Authorization Bearer token on sensitive routes
+async fn api_key_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
+    if let Ok(expected_key) = std::env::var("RAG_API_KEY") {
+        if !expected_key.trim().is_empty() {
+            let headers = req.headers();
+            let auth_header = headers
+                .get("authorization")
+                .and_then(|h| h.to_str().ok())
+                .and_then(|s| s.strip_prefix("Bearer ").or_else(|| s.strip_prefix("bearer ")));
+            let rag_key_header = headers
+                .get("x-rag-api-key")
+                .and_then(|h| h.to_str().ok());
+
+            let valid = match (auth_header, rag_key_header) {
+                (Some(k), _) if k == expected_key => true,
+                (_, Some(k)) if k == expected_key => true,
+                _ => false,
+            };
+
+            if !valid {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+        }
+    }
+    Ok(next.run(req).await)
+}
+
 pub fn build_router(engine: Arc<LocalRagEngine>) -> Router {
-    Router::new()
-        .route("/", get(serve_dashboard))
-        .route("/api/health", get(health_handler))
-        .route("/api/stats", get(stats_handler))
-        .route("/api/license/status", get(license_status_handler))
-        .route("/api/license/renew", post(license_renew_handler))
+    let protected_routes = Router::new()
         .route("/api/documents/upload", post(upload_document_handler))
         .route("/api/documents/text", post(ingest_text_handler))
         .route("/api/documents/list", get(list_documents_handler))
         .route("/api/rag/query", post(rag_query_handler))
         .route("/api/crm/customers", get(list_customers_handler).post(upsert_customer_handler))
         .route("/api/crm/customers/:id/notes", post(add_customer_note_handler))
+        .route_layer(middleware::from_fn(api_key_middleware));
+
+    let public_routes = Router::new()
+        .route("/", get(serve_dashboard))
+        .route("/api/health", get(health_handler))
+        .route("/api/stats", get(stats_handler))
+        .route("/api/license/status", get(license_status_handler))
+        .route("/api/license/renew", post(license_renew_handler));
+
+    public_routes
+        .merge(protected_routes)
         .layer(
             CorsLayer::new()
                 .allow_origin(tower_http::cors::AllowOrigin::predicate(|origin, _| {
@@ -183,7 +217,7 @@ async fn upload_document_handler(
 }
 
 async fn list_documents_handler(State(engine): State<Arc<LocalRagEngine>>) -> impl IntoResponse {
-    match engine.list_documents() {
+    match engine.list_documents().await {
         Ok(docs) => (StatusCode::OK, Json(json!({ "success": true, "documents": docs }))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -589,6 +623,16 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
       }
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     async function executeSearch() {
       const q = document.getElementById('queryInput').value.trim();
       if (!q) return;
@@ -615,10 +659,10 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
               html += `
                 <div class="citation-box">
                   <div class="citation-header">
-                    <span>Source #${idx+1}: [${c.category}] ${c.doc_id}</span>
+                    <span>Source #${idx+1}: [${escapeHtml(c.category)}] ${escapeHtml(c.doc_id)}</span>
                     <span>Similarity: ${(c.score * 100).toFixed(1)}%</span>
                   </div>
-                  <div>${c.content_preview}</div>
+                  <div style="white-space:pre-wrap;">${escapeHtml(c.content_preview)}</div>
                 </div>
               `;
             });
@@ -696,14 +740,14 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
         if (data.success && data.customers.length > 0) {
           let html = "";
           data.customers.forEach(c => {
-            const tags = c.tags.map(t => `<span class="tag">${t}</span>`).join(' ');
-            const docs = c.associated_docs.length > 0 ? c.associated_docs.join(', ') : 'None';
+            const tags = c.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(' ');
+            const docs = c.associated_docs.length > 0 ? c.associated_docs.map(d => escapeHtml(d)).join(', ') : 'None';
             html += `
               <div class="customer-card">
                 <div class="customer-header">
                   <div>
-                    <div class="customer-name">${c.name} <span class="mono" style="color:var(--text-muted); font-size:12px;">(${c.id})</span></div>
-                    <div class="customer-company">${c.company} &bull; ${c.email} &bull; ${c.phone}</div>
+                    <div class="customer-name">${escapeHtml(c.name)} <span class="mono" style="color:var(--text-muted); font-size:12px;">(${escapeHtml(c.id)})</span></div>
+                    <div class="customer-company">${escapeHtml(c.company)} &bull; ${escapeHtml(c.email)} &bull; ${escapeHtml(c.phone)}</div>
                   </div>
                   <div style="font-weight:700; color:var(--accent);">₹${c.deal_value.toLocaleString()}</div>
                 </div>

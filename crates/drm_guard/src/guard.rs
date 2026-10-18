@@ -364,13 +364,14 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                             verify_ed25519_signature(ROOT_ED25519_PUBLIC_KEY_HEX, &canonical_msg, sig_hex)?;
 
                             // Cache verified lease to disk for offline grace
+                            // M-02: Never persist session key to disk. Session keys reside exclusively in RAM.
                             let cached_lease = CachedSignedLease {
                                 client_id: client_id.clone(),
                                 machine_uuid: req.machine_uuid.clone(),
                                 app_name: req.app_name.clone(),
                                 expires_at: body.expires_at,
                                 nonce: req.nonce.clone(),
-                                session_key_hex: body.session_key_hex.clone(),
+                                session_key_hex: None,
                                 signature_hex: sig_hex.to_string(),
                             };
                             if let Ok(json_str) = serde_json::to_string(&cached_lease) {
@@ -409,6 +410,17 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         let cache_file = lease_cache_path(self.metrics_provider.app_name());
         if let Ok(cache_data) = std::fs::read_to_string(&cache_file) {
             if let Ok(cached) = serde_json::from_str::<CachedSignedLease>(&cache_data) {
+                // M-01: Verify app_name claim matches current application
+                if cached.app_name != self.metrics_provider.app_name() {
+                    eprintln!(
+                        "[DRM GUARD SECURITY] App name claim mismatch! Expected: {}, Found: {}",
+                        self.metrics_provider.app_name(),
+                        cached.app_name
+                    );
+                    self.invalidate_and_zeroize(LicenseStatus::Revoked).await;
+                    return Err(anyhow!("Lease app name claim mismatch. Tampering detected."));
+                }
+
                 let cached_canonical = format!(
                     "{}:{}:{}:{}:{}:{}",
                     cached.client_id,
@@ -422,6 +434,7 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                 if verify_ed25519_signature(ROOT_ED25519_PUBLIC_KEY_HEX, &cached_canonical, &cached.signature_hex).is_ok()
                     && cached.machine_uuid == self.fingerprint.machine_uuid
                     && cached.client_id == client_id
+                    && cached.app_name == self.metrics_provider.app_name()
                 {
                     if now < cached.expires_at {
                         self.apply_lease(cached.expires_at, cached.session_key_hex.as_deref()).await?;

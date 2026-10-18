@@ -15,6 +15,16 @@ pub struct EncryptedDocumentVault {
 }
 
 impl EncryptedDocumentVault {
+    /// Computes a one-way blind SHA-256 index hash of a document ID to allow grouping and deletion
+    /// without exposing plaintext document names in the SQLite database.
+    pub fn compute_doc_hash(doc_id: &str) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(doc_id.as_bytes());
+        let hash = hasher.finalize();
+        hash.iter().map(|b| format!("{:02x}", b)).collect()
+    }
+
     /// Opens or creates an encrypted SQLite document database file
     pub fn open<P: AsRef<Path>>(db_path: P) -> Result<Self> {
         let conn = Connection::open(db_path)
@@ -24,15 +34,11 @@ impl EncryptedDocumentVault {
             r#"
             CREATE TABLE IF NOT EXISTS encrypted_chunks (
                 chunk_id TEXT PRIMARY KEY,
-                doc_id TEXT NOT NULL,
-                chunk_index INTEGER NOT NULL,
+                doc_id_hash TEXT NOT NULL,
                 nonce BLOB NOT NULL,
-                ciphertext BLOB NOT NULL,
-                category TEXT NOT NULL,
-                page_number INTEGER
+                ciphertext BLOB NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_doc_id ON encrypted_chunks(doc_id);
-            CREATE INDEX IF NOT EXISTS idx_category ON encrypted_chunks(category);
+            CREATE INDEX IF NOT EXISTS idx_doc_id_hash ON encrypted_chunks(doc_id_hash);
             "#,
         )
         .context("Failed to initialize encrypted_chunks schema")?;
@@ -51,14 +57,11 @@ impl EncryptedDocumentVault {
             r#"
             CREATE TABLE IF NOT EXISTS encrypted_chunks (
                 chunk_id TEXT PRIMARY KEY,
-                doc_id TEXT NOT NULL,
-                chunk_index INTEGER NOT NULL,
+                doc_id_hash TEXT NOT NULL,
                 nonce BLOB NOT NULL,
-                ciphertext BLOB NOT NULL,
-                category TEXT NOT NULL,
-                page_number INTEGER
+                ciphertext BLOB NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_doc_id ON encrypted_chunks(doc_id);
+            CREATE INDEX IF NOT EXISTS idx_doc_id_hash ON encrypted_chunks(doc_id_hash);
             "#,
         )?;
 
@@ -67,7 +70,9 @@ impl EncryptedDocumentVault {
         })
     }
 
-    /// Stores a document chunk after encrypting it with the volatile session key
+    /// Stores a document chunk after encrypting it with the volatile session key.
+    /// All metadata (`doc_id`, `category`, `chunk_index`, `page_number`) is encrypted
+    /// inside the AES-256-GCM ciphertext payload.
     pub fn store_chunk(&self, key: &SessionKey, chunk: &DocumentChunk) -> Result<()> {
         let json_bytes = serde_json::to_vec(chunk)
             .context("Failed to serialize DocumentChunk to JSON")?;
@@ -75,21 +80,20 @@ impl EncryptedDocumentVault {
         let (ciphertext, nonce) = AesGcmCipher::encrypt(key, &json_bytes)
             .context("Failed to encrypt DocumentChunk with AES-256-GCM")?;
 
+        let doc_hash = Self::compute_doc_hash(&chunk.doc_id);
+
         let conn = self.conn.lock().unwrap();
         conn.execute(
             r#"
             INSERT OR REPLACE INTO encrypted_chunks
-            (chunk_id, doc_id, chunk_index, nonce, ciphertext, category, page_number)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            (chunk_id, doc_id_hash, nonce, ciphertext)
+            VALUES (?1, ?2, ?3, ?4)
             "#,
             params![
                 chunk.chunk_id,
-                chunk.doc_id,
-                chunk.chunk_index as i64,
+                doc_hash,
                 nonce.to_vec(),
-                ciphertext,
-                chunk.category,
-                chunk.page_number.map(|p| p as i64)
+                ciphertext
             ],
         )
         .context("Failed to insert encrypted chunk into SQLite vault")?;
@@ -141,29 +145,43 @@ impl EncryptedDocumentVault {
         Ok(count as usize)
     }
 
-    /// Lists all unique document IDs stored in the vault
-    pub fn list_document_ids(&self) -> Result<Vec<String>> {
+    /// Lists all unique document IDs stored in the vault by decrypting metadata with session key
+    pub fn list_document_ids(&self, key: &SessionKey) -> Result<Vec<String>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn
-            .prepare("SELECT DISTINCT doc_id FROM encrypted_chunks")
+            .prepare("SELECT nonce, ciphertext FROM encrypted_chunks")
             .context("Failed to prepare document listing statement")?;
 
         let rows = stmt
-            .query_map([], |row| row.get(0))
-            .context("Failed to query document IDs")?;
+            .query_map([], |row| Ok((row.get::<_, Vec<u8>>(0)?, row.get::<_, Vec<u8>>(1)?)))
+            .context("Failed to query document chunks")?;
 
+        let mut seen = std::collections::HashSet::new();
         let mut doc_ids = Vec::new();
+
         for r in rows {
-            doc_ids.push(r?);
+            let (nonce_blob, ciphertext) = r?;
+            if nonce_blob.len() == 12 {
+                let mut nonce = [0u8; 12];
+                nonce.copy_from_slice(&nonce_blob);
+                if let Ok(plaintext) = AesGcmCipher::decrypt(key, &ciphertext, &nonce) {
+                    if let Ok(chunk) = serde_json::from_slice::<DocumentChunk>(&plaintext) {
+                        if seen.insert(chunk.doc_id.clone()) {
+                            doc_ids.push(chunk.doc_id);
+                        }
+                    }
+                }
+            }
         }
         Ok(doc_ids)
     }
 
-    /// Deletes all chunks associated with a specific document ID
+    /// Deletes all chunks associated with a specific document ID using blind hash
     pub fn delete_document(&self, doc_id: &str) -> Result<usize> {
+        let doc_hash = Self::compute_doc_hash(doc_id);
         let conn = self.conn.lock().unwrap();
         let affected = conn
-            .execute("DELETE FROM encrypted_chunks WHERE doc_id = ?1", params![doc_id])
+            .execute("DELETE FROM encrypted_chunks WHERE doc_id_hash = ?1", params![doc_hash])
             .context(format!("Failed to delete document '{}' from SQLite vault", doc_id))?;
         Ok(affected)
     }

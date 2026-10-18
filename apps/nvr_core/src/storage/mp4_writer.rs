@@ -111,3 +111,100 @@ impl RollingSegmentWriter {
         }
     }
 }
+
+/// Real FFmpeg RTSP stream recorder for production-grade continuous MP4 recording.
+/// Uses copy codec (-c copy) to achieve zero CPU transcoding overhead.
+pub struct FfmpegRtspRecorder {
+    pub camera_id: String,
+    pub output_path: PathBuf,
+    child: Option<tokio::process::Child>,
+    stdin: Option<tokio::process::ChildStdin>,
+}
+
+impl FfmpegRtspRecorder {
+    /// Launches a real FFmpeg recording process for the given RTSP URL.
+    pub fn start_recording(rtsp_url: &str, camera_id: &str, output_dir: &std::path::Path) -> Result<Self> {
+        fs::create_dir_all(output_dir)
+            .with_context(|| format!("Failed to create recording directory {:?}", output_dir))?;
+
+        let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
+        let output_path = output_dir.join(format!("{}_{}.mp4", camera_id, timestamp));
+
+        let mut cmd = tokio::process::Command::new("ffmpeg");
+        cmd.args([
+            "-rtsp_transport",
+            "tcp",
+            "-i",
+            rtsp_url,
+            "-c",
+            "copy",
+            "-f",
+            "mp4",
+            "-movflags",
+            "+faststart",
+            output_path.to_str().unwrap_or("output.mp4"),
+        ])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+
+        let mut child = cmd
+            .spawn()
+            .with_context(|| format!("Failed to spawn FFmpeg recording process for camera {}", camera_id))?;
+
+        let stdin = child.stdin.take();
+
+        Ok(Self {
+            camera_id: camera_id.to_string(),
+            output_path,
+            child: Some(child),
+            stdin,
+        })
+    }
+
+    /// Gracefully stops recording by sending 'q\n' to FFmpeg's stdin.
+    pub async fn stop_gracefully(&mut self) -> Result<()> {
+        if let Some(mut stdin) = self.stdin.take() {
+            use tokio::io::AsyncWriteExt;
+            let _ = stdin.write_all(b"q\n").await;
+            let _ = stdin.flush().await;
+        }
+
+        if let Some(mut child) = self.child.take() {
+            let wait_res = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+            if wait_res.is_err() {
+                let _ = child.kill().await;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates that the recorded MP4 file is a valid video container via ffprobe.
+    pub async fn validate_container(&self) -> Result<bool> {
+        if !self.output_path.exists() {
+            return Ok(false);
+        }
+        let output = tokio::process::Command::new("ffprobe")
+            .args([
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                self.output_path.to_str().unwrap_or(""),
+            ])
+            .output()
+            .await;
+
+        match output {
+            Ok(out) => Ok(out.status.success() && !out.stdout.is_empty()),
+            Err(_) => {
+                // If ffprobe is not installed, verify file size > 1024 bytes (header + mdat)
+                let meta = fs::metadata(&self.output_path)?;
+                Ok(meta.len() > 1024)
+            }
+        }
+    }
+}

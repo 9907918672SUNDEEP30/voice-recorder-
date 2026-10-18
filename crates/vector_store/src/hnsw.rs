@@ -339,7 +339,13 @@ impl HnswGraph {
     }
 
     fn clear(&mut self) {
+        use zeroize::Zeroize;
+        for node in self.nodes.iter_mut() {
+            node.vector.zeroize();
+            node.chunk_id.zeroize();
+        }
         self.nodes.clear();
+        self.nodes.shrink_to_fit();
         self.chunk_to_id.clear();
         self.enter_point = None;
         self.max_level = 0;
