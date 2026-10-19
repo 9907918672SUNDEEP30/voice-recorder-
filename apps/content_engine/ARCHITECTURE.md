@@ -152,3 +152,13 @@ pub struct ScriptLine {
 2. **RAM:** Total process memory bounded under 4 GB.
 3. **GPU (Local):** AMD RX 550 used only for DirectML when available; automatic graceful fallback to CPU.
 4. **Cloud GPU:** High-VRAM diffusion and 4K super-resolution offloaded to NVIDIA A10G/T4 on Lightning AI.
+
+---
+
+## 5. Supabase Cloud Media Matrix Subsystem (`src/supabase.rs`)
+- **Database Engine:** Supabase PostgreSQL Cloud (Project `hbnwmjrrhvpibtqsucqz`).
+- **Master Tables:**
+  1. `public.content_pieces`: Stores synthesized 60s shorts, 1200w SEO articles, YouTube long scripts, Twitter threads, word counts, and media URLs.
+  2. `public.publishing_logs`: Tracks multi-platform syndication across YouTube, Twitter (X), LinkedIn, and blogs.
+  3. `public.trend_dossiers`: Stores reconnaissance intelligence, competitor benchmark velocity, and viral hooks.
+- **Auto-Sync:** `ContentEngineOrchestrator::execute_campaign` automatically synchronizes all generated assets to Supabase Cloud upon pipeline completion.

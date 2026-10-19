@@ -4,6 +4,7 @@ use crate::cloud::{CloudWorkerGenerator, SshBridge};
 use crate::config::ContentEngineConfig;
 use crate::generator::{OmnichannelGenerator, OmnichannelPackage};
 use crate::recon::TrendReconEngine;
+use crate::supabase::SupabaseContentClient;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
@@ -11,6 +12,7 @@ pub struct ContentEngineOrchestrator {
     config: ContentEngineConfig,
     recon_engine: TrendReconEngine,
     voice_engine: TtsVoiceEngine,
+    pub supabase_client: SupabaseContentClient,
 }
 
 impl ContentEngineOrchestrator {
@@ -18,10 +20,18 @@ impl ContentEngineOrchestrator {
         let recon_engine = TrendReconEngine::new(&config.cdp.host, config.cdp.port);
         let voice_engine = TtsVoiceEngine::new();
 
+        let cfg_val: serde_json::Value = std::fs::read_to_string("config.json")
+            .or_else(|_| std::fs::read_to_string("../../config.json"))
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_else(|| serde_json::json!({}));
+        let supabase_client = SupabaseContentClient::new_from_env_or_config(&cfg_val);
+
         Self {
             config,
             recon_engine,
             voice_engine,
+            supabase_client,
         }
     }
 
@@ -36,6 +46,7 @@ impl ContentEngineOrchestrator {
 
         // 1. Module 8A: Universal Trend Reconnaissance
         let dossier = self.recon_engine.analyze_topic(active_topic).await?;
+        let _ = self.supabase_client.save_trend_dossier(&dossier).await;
 
         // 2. Omnichannel Content Generation Matrix (Shorts, Long-form, Blog, Twitter)
         let package = OmnichannelGenerator::generate_package(&dossier)?;
@@ -60,9 +71,10 @@ impl ContentEngineOrchestrator {
         let avatar_path = self.ensure_avatar_exists()?;
 
         // 5. Cloud Handshake OR Local Execution
-        if self.config.is_cloud_active() {
+        let preview_url = if self.config.is_cloud_active() {
             println!("\n⚡ [Cloud Execution] Handshaking with Lightning AI Cloud GPU...");
             self.execute_cloud_pipeline(&avatar_path, &audio_path, &ass_path, &package).await?;
+            "cloud_rendered_video.mp4".to_string()
         } else {
             println!("\n💻 [Local Execution] Mode is set to LOCAL. Generating local preview composite...");
             let local_video_out = self.config.local.content_dir.join("local_preview.mp4");
@@ -73,11 +85,20 @@ impl ContentEngineOrchestrator {
                 &local_video_out,
             ).await?;
             println!("  ✅ Local preview available at: {:?}", local_video_out);
-        }
+            local_video_out.to_string_lossy().to_string()
+        };
+
+        // 6. Supabase Cloud Persistence (Final Omnichannel Assets)
+        let _ = self.supabase_client.save_content_package(
+            &package,
+            audio_path.to_str(),
+            ass_path.to_str(),
+            Some(&preview_url),
+        ).await;
 
         println!("\n==================================================================");
         println!("🎉 CAMPAIGN EXECUTION FINISHED SUCCESSFULLY!");
-        println!("   All assets generated and ready in: {:?}", self.config.local.content_dir);
+        println!("   All assets generated, saved locally and synced to Supabase Cloud: {:?}", self.config.local.content_dir);
         println!("==================================================================\n");
 
         Ok(package)

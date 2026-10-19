@@ -117,20 +117,31 @@ impl<M: UsageMetricProvider> DRMGuardBuilder<M> {
             update_available: None,
         };
 
+        let heartbeat_url = self
+            .heartbeat_url
+            .or_else(|| std::env::var("SHAMBHAVI_DRM_URL").ok())
+            .unwrap_or_else(|| DEFAULT_HEARTBEAT_URL.to_string());
+
+        let mut client_builder = Client::builder().timeout(Duration::from_secs(10));
+        if let Ok(ip) = "104.21.47.93".parse::<std::net::IpAddr>() {
+            client_builder = client_builder.resolve(
+                "shambhavi-drm-guard.shambhaviailabs.workers.dev",
+                std::net::SocketAddr::new(ip, 443),
+            );
+        }
+        let http_client = client_builder.build().unwrap_or_default();
+
         Ok(DRMGuard {
             client_id: Arc::new(RwLock::new(client_id)),
             license_key: Arc::new(RwLock::new(license_key)),
-            heartbeat_url: self.heartbeat_url,
+            heartbeat_url: Some(heartbeat_url),
             fingerprint,
             clock_guard,
             metrics_provider,
             grace_period_hours: self.grace_period_hours,
             updater,
             state: Arc::new(RwLock::new(initial_state)),
-            http_client: Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()
-                .unwrap_or_default(),
+            http_client,
         })
     }
 }
@@ -233,6 +244,9 @@ use std::path::PathBuf;
 
 pub const ROOT_ED25519_PUBLIC_KEY_HEX: &str =
     "82d9651fdb75e85ab7e88c35440e4c7629b53b97c9fbfdf2335a6cb458af1400";
+
+pub const DEFAULT_HEARTBEAT_URL: &str =
+    "https://shambhavi-drm-guard.shambhaviailabs.workers.dev/api/heartbeat";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedSignedLease {
@@ -396,7 +410,17 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                     }
                 }
                 Ok(resp) => {
-                    eprintln!("[DRM GUARD] Worker returned non-success HTTP status: {}", resp.status());
+                    let status_code = resp.status();
+                    if let Ok(err_body) = resp.json::<HeartbeatResponse>().await {
+                        if err_body.status == "limit_exceeded" {
+                            self.invalidate_and_zeroize(LicenseStatus::LimitExceeded).await;
+                            return Err(anyhow!("Licensing limit exceeded: {:?}", err_body.message));
+                        } else if err_body.status == "revoked" {
+                            self.invalidate_and_zeroize(LicenseStatus::Revoked).await;
+                            return Err(anyhow!("License revoked: {:?}", err_body.message));
+                        }
+                    }
+                    eprintln!("[DRM GUARD] Worker returned non-success HTTP status: {}", status_code);
                 }
                 Err(e) => {
                     eprintln!("[DRM GUARD] Network error connecting to licensing worker: {}. Checking offline grace...", e);
@@ -486,6 +510,52 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
         eprintln!("[DRM GUARD] License invalidated ({:?}). Volatile memory zeroized.", st.status);
     }
 
+    /// Dispatches proactive 10-minute health telemetry (wire faults, camera offline, storage)
+    /// to the Cloudflare Worker `/api/telemetry/heartbeat-10m` endpoint.
+    pub async fn send_10m_health_telemetry(
+        &self,
+        wire_faults: u32,
+        offline_cameras: &[String],
+        storage_pct: f64,
+    ) -> Result<()> {
+        let heartbeat_endpoint = self
+            .heartbeat_url
+            .as_deref()
+            .unwrap_or(DEFAULT_HEARTBEAT_URL);
+        let telemetry_url = heartbeat_endpoint.replace("/api/heartbeat", "/api/telemetry/heartbeat-10m");
+        let client_id = self.client_id.read().await.clone();
+        let license_key = self.license_key.read().await.clone();
+        let metrics = self.metrics_provider.collect_metrics().await;
+
+        let payload = serde_json::json!({
+            "client_id": client_id,
+            "machine_uuid": self.fingerprint.machine_uuid,
+            "app_name": self.metrics_provider.app_name(),
+            "wire_faults": wire_faults,
+            "offline_cameras": offline_cameras,
+            "storage_pct": storage_pct,
+            "metrics": metrics
+        });
+
+        let resp = self
+            .http_client
+            .post(&telemetry_url)
+            .header("Authorization", format!("Bearer {}", license_key))
+            .json(&payload)
+            .send()
+            .await?;
+
+        if resp.status().is_success() {
+            println!("[DRM TELEMETRY] 10-min health telemetry successfully sent to Cloudflare edge.");
+            Ok(())
+        } else {
+            let status = resp.status();
+            let err_text = resp.text().await.unwrap_or_default();
+            eprintln!("[DRM TELEMETRY ERROR] Server responded with {}: {}", status, err_text);
+            Err(anyhow!("Telemetry error {}: {}", status, err_text))
+        }
+    }
+
     /// Spawns the background Tokio heartbeat monitoring loop.
     pub fn start_background_daemon(self: Arc<Self>) {
         tokio::spawn(async move {
@@ -509,6 +579,28 @@ impl<M: UsageMetricProvider> DRMGuard<M> {
                 // 2. Refresh heartbeat
                 if let Err(e) = self.perform_heartbeat().await {
                     eprintln!("[DRM HEARTBEAT ERROR] Cycle failed: {}", e);
+                }
+
+                // 3. Proactive 10-minute health telemetry dispatch (wire faults, camera offline, storage)
+                let metrics = self.metrics_provider.collect_metrics().await;
+                let wire_faults = metrics
+                    .get("wire_faults")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+                let offline_cameras: Vec<String> = metrics
+                    .get("offline_cameras")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok())
+                    .unwrap_or_default();
+                let storage_pct = metrics
+                    .get("storage_pct")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+
+                if let Err(e) = self
+                    .send_10m_health_telemetry(wire_faults, &offline_cameras, storage_pct)
+                    .await
+                {
+                    eprintln!("[DRM TELEMETRY NOTICE] 10-min health report: {}", e);
                 }
             }
         });

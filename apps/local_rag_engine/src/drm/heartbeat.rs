@@ -86,6 +86,10 @@ impl DrmGuard {
             last_verified_ts: now,
         };
 
+        let worker_url = worker_url
+            .or_else(|| std::env::var("SHAMBHAVI_DRM_URL").ok())
+            .or_else(|| Some("https://shambhavi-drm-guard.shambhaviailabs.workers.dev/api/heartbeat".to_string()));
+
         Self {
             client_id,
             license_key,

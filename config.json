@@ -46,5 +46,15 @@
       "path_config": "OpenVoice-ONNX-v2/tone_config.json",
       "sample_rate": 22050
     }
+  },
+  "supabase": {
+    "url": "https://kbrfcrhioqdnhznkpseb.supabase.co",
+    "key": "ENV_SUPABASE_KEY"
+  },
+  "content_engine": {
+    "supabase": {
+      "url": "https://hbnwmjrrhvpibtqsucqz.supabase.co",
+      "key": "ENV_SUPABASE_CONTENT_KEY"
+    }
   }
 }

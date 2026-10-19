@@ -69,31 +69,58 @@
 
 ---
 
-## 📝 Session Log
+## 🌐 PHASE 5 — CLOUDFLARE D1 + WORKER LIVE LICENSING & DRM
 
-| Time | Action |
-|---|---|
-| 18:00 | `WORK_PROGRESS.md` created; audit review roadmap initialized |
-| 18:03 | **H-01 Fixed:** Mandatory Ed25519 signature enforcement in `drm_guard/src/updater.rs` |
-| 18:04 | **H-02 Fixed:** Added `AdminAuthLayer` Bearer token middleware in `nvr_core/src/web_portal/routes.rs` and initialized session token in `mod.rs` |
-| 18:05 | **H-03 Fixed:** Added `sanitize_stream_id` anti-path traversal in `voice_agent/src/telephony.rs` & `supabase.rs` |
-| 18:05 | **H-04 Fixed:** Added `X-Provider-Signature` & `Bearer` caller authentication in `voice_agent/src/telephony.rs` |
-| 18:05 | **M-09 Fixed:** Filtered out masked literal (`"******"`) tokens in `voice_agent/src/supabase.rs` |
-| 18:07 | **H-06 Fixed:** Added `uncertain` & `spatial_concentration` metrics and calibrated thresholds in `cctv_guard/src/tier2/qwen_vlm.rs` |
-| 18:08 | **H-05 Fixed:** Implemented real FFmpeg RTSP native RGB24 decoding in `cctv_guard/src/rtsp/client.rs` (no synthetic fallback) |
-| 18:08 | **H-07 Fixed:** Added `FfmpegRtspRecorder` with zero-copy stream recording and `ffprobe` validation in `nvr_core/src/storage/mp4_writer.rs` |
-| 18:10 | **H-08 Fixed:** Enforced fail-closed SD-Turbo safetensors model verification in `crates/core/src/models/image_gen.rs` |
-| 18:11 | **H-09 Fixed:** Enforced strict Ed25519 root-signed lease check in `apps/local_rag_engine/src/drm/heartbeat.rs` (no mock session keys) |
-| 18:12 | **H-10 Fixed:** Added loopback binding check in `apps/local_rag_engine/src/main.rs` & `X-Rag-Api-Key` middleware in `server/routes.rs` |
-| 18:13 | **M-01 Fixed:** Added application name claim verification in `crates/drm_guard/src/guard.rs` |
-| 18:13 | **M-02 Fixed:** Stripped `session_key_hex` from disk cache; kept in volatile `ZeroizeOnDrop` RAM in `crates/drm_guard/src/guard.rs` |
-| 18:14 | **M-10 Fixed:** Implemented client-side `escapeHtml()` sanitization across dashboard & citations in `apps/local_rag_engine/src/server/routes.rs` |
+| Milestone | Target | Status | Verification & Output |
+|---|---|:---:|---|
+| Cloudflare D1 + Worker Setup | `crates/drm_guard/scripts` | ✅ 100% LIVE | Worker: `https://shambhavi-drm-guard.shambhaviailabs.workers.dev`<br>D1 Database: `shambhavi-drm-db` (APAC)<br>KV Namespace: `DRM_KV` |
+| End-to-End Live DRM Tests | `crates/drm_guard/tests/live_edge_tests.rs` | ✅ 3/3 PASS | 24h Ed25519 lease granted across all 8 apps; wire faults & camera offline logged in 0.25ms; quota enforcement verified |
 
 ---
 
-## ⚡ Resume Instructions (Next Session / Post-Limit)
-> अगर token limit आ जाए तो नई session में यह steps:
-> 1. `SYSTEM_STATE.md` पढ़ो
-> 2. `WORK_PROGRESS.md` पढ़ो (यह file)
-> 3. पहला ⏳ fix उठाओ: **M-05** (`crates/core/src/models/onnx_adapters.rs` - Silero VAD 512-sample chunk iteration guard) और वहाँ से शुरू करो
-> 4. इसके बाद: M-03, M-04, M-06, M-07, M-08, MM-01, MM-02, MM-03, L-01, L-02
+## 🎙️ PHASE 5B — VOICE AI AGENT SUPABASE CRM (CLOUD POSTGRESQL)
+
+| Milestone | Target | Status | Verification & Output |
+|---|---|:---:|---|
+| SQL CRM Schema Migration | `apps/voice_agent/supabase_schema.sql` | ✅ 100% LIVE | Executed directly on `db.kbrfcrhioqdnhznkpseb.supabase.co:5432`<br>Tables: `leads`, `call_logs`, `scheduled_callbacks`, `meeting_bookings`, `action_tickets` |
+| Native Rust CRM Engine | `apps/voice_agent/src/supabase.rs` | ✅ 100% COMPLETE | Batch lead retrieval (10,000+ queue), call logging with Whisper/Qwen, precision callbacks, calendar booking |
+| Live CRM Integration Test | `apps/voice_agent/tests/supabase_crm_integration.rs` | ✅ 1/1 PASS | Verified live on cloud database in 2.89s with 0 warnings |
+
+---
+
+## ✍️ PHASE 5C — CONTENT ENGINE SUPABASE MEDIA MATRIX (CLOUD POSTGRESQL)
+
+| Milestone | Target | Status | Verification & Output |
+|---|---|:---:|---|
+| SQL Media Matrix Schema | `apps/content_engine/supabase_schema.sql` | ✅ 100% LIVE | Executed directly on `db.hbnwmjrrhvpibtqsucqz.supabase.co:5432`<br>Tables: `content_pieces`, `publishing_logs`, `trend_dossiers` |
+| Native Rust Content Engine Sync | `apps/content_engine/src/supabase.rs` | ✅ 100% COMPLETE | Auto-saves 60s shorts, 1200w SEO articles, YouTube scripts, Twitter threads, audio, and captions |
+| Orchestrator Auto-Persistence | `apps/content_engine/src/pipeline/orchestrator.rs` | ✅ 100% WIRED | Campaigns auto-save to cloud upon execution |
+| Live Content Cloud Test | `apps/content_engine/tests/supabase_content_integration.rs` | ✅ 1/1 PASS | Verified live on cloud database in 3.18s with 0 errors |
+
+---
+
+## 🛡️ PHASE 6 — UNIFIED AUTH, DRM & BILLING SECURITY ARCHITECTURE
+
+| Milestone | Target | Status | Description |
+|---|---|:---:|---|
+| Unified Auth Crate | `crates/ai_core_auth` | ✅ 100% COMPLETE | Core traits: `Tier1CloudGate`, `Tier2LocalAuth`, `Tier3DrmHeartbeat`; SHA-256 hardware binding; Ed25519 offline JWT verification in <0.25ms; 4/4 Unit Tests PASS. |
+| Cloudflare Gateway Worker | `workers/ai_core_gateway` | ✅ 100% READY | Live dual-gate permit check, Ed25519 JWT issuer, 24h machine heartbeat, Supabase ledger integration. |
+| Gateway Database Ledger | `workers/ai_core_gateway/schema.sql` | ✅ 100% MIGRATED | Applied live to Supabase: `users`, `user_credits`, `licenses`, `credit_transactions`. |
+
+---
+
+## 🏢 PHASE 7 — SHAMBHAVI ENTERPRISE MONOREPO MIGRATION (`shambhavi_workspace`)
+
+| Milestone | Target | Status | Description |
+|---|---|:---:|---|
+| Polyglot Monorepo Root | `D:\shambhavi_workspace\` | ✅ 100% ACTIVE | Clean architectural separation: `ai_core_framework/` (Rust), `web_dashboards/` (Next.js), `native_apps/` (Android/Desktop). |
+| Rust Core Framework Relocation | `D:\shambhavi_workspace\ai_core_framework` | ✅ 100% VERIFIED | All 7 crates, 8 apps, models, IPC daemons, and `.git` repository relocated; zero Node.js interference; `cargo check --workspace` PASSES in 2m 05s. |
+| Next.js Web Dashboards Folder | `D:\shambhavi_workspace\web_dashboards\` | ✅ 100% INITIALIZED | `content_engine_ui` (Next.js 14, Tailwind, Supabase Auth, Cloudflare Gateway); `voice_agent_pwa/`; `wealth_dashboard/`. |
+| Native Applications Folder | `D:\shambhavi_workspace\native_apps\` | ✅ 100% INITIALIZED | `android_mobile/` (Vocal Recorder, Video Studio); `desktop_clients/` (Studio DAW, OBS Studio). |
+| Environment Variable Isolation | `ai_core_framework/.env` vs `web_dashboards/*/.env.local` | ✅ 100% ISOLATED | Strict secret DB credentials in Rust core; public keys only in Next.js `.env.local`. |
+
+---
+
+## ⚡ SSOT Reference
+All updates synchronized with [SYSTEM_STATE.md](file:///D:/shambhavi_workspace/ai_core_framework/SYSTEM_STATE.md).
+

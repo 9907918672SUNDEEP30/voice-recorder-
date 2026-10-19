@@ -44,6 +44,7 @@ pub struct HeartbeatRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeartbeatResponse {
     pub status: String,
+    #[serde(default)]
     pub expires_at: i64,
     #[serde(alias = "session_key")]
     pub session_key_hex: Option<String>,

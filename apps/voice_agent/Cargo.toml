@@ -33,6 +33,7 @@ async-trait = "0.1.80"
 regex = "1.10.4"
 base64 = "0.22"
 reqwest = { version = "0.13.5", features = ["json"] }
+chrono = { version = "0.4", features = ["serde"] }
 
 # Shared DRM Guard & 24h Licensing
 drm_guard = { path = "../../crates/drm_guard" }

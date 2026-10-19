@@ -78,3 +78,12 @@ output/omnichannel_content/
 ├── audio.wav                 # Mastered 24kHz studio voiceover
 └── captions.ass              # Word-by-word glowing karaoke subtitles
 ```
+
+---
+
+## ☁️ Supabase Cloud Media Matrix
+Content Engine automatically syncs all finalized assets to Supabase PostgreSQL (`hbnwmjrrhvpibtqsucqz`):
+- `content_pieces`: Stores full omnichannel text packages, audio URLs, and video preview paths.
+- `trend_dossiers`: Competitor analysis, viral hooks, and breaking news citations.
+- `publishing_logs`: Tracks cross-platform syndication across YouTube, Twitter (X), and SEO blogs.
+

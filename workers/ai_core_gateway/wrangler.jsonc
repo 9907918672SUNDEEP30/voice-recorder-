@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shambhavi-ai-core-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shambhavi-drm-db",
+      "database_id": "6ed441d5-0641-438a-90d6-882c8ae7176c"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "GATEWAY_KV",
+      "id": "b9d476d5a2844b10a6da1271296aa529"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "*",
+    "SUPABASE_URL": "https://kbrfcrhioqdnhznkpseb.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_dmdpIvfJi8GOf7741x1Osg_u8jftntR",
+    "ROOT_ED25519_PRIVATE_KEY_HEX": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
+  }
+}

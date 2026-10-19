@@ -1,0 +1,21 @@
+[package]
+name = "ai_core_auth"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sandeep Udasi", "Shambhavi AI Labs Core Team"]
+description = "Unified Tiered Authentication, Licensing (DRM), and Credit-Metering Security Engine for AI Core Framework"
+
+[dependencies]
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full", "time"] }
+reqwest = { version = "0.13.5", features = ["json"] }
+chrono = { version = "0.4", features = ["serde"] }
+ed25519-dalek = { version = "2.2", features = ["rand_core"] }
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+zeroize = { version = "1.8", features = ["derive", "zeroize_derive"] }
+async-trait = "0.1"

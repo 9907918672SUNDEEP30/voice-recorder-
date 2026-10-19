@@ -172,23 +172,13 @@ set SUPABASE_URL=https://your-project.supabase.co
 set SUPABASE_KEY=your-supabase-service-role-or-anon-key
 ```
 
-### टेबल स्कीमा (SQL):
-```sql
-CREATE TABLE voice_call_logs (
-    id BIGSERIAL PRIMARY KEY,
-    call_sid TEXT NOT NULL,
-    stream_sid TEXT NOT NULL,
-    caller_number TEXT,
-    receiver_number TEXT,
-    direction TEXT,
-    start_time_ms BIGINT,
-    end_time_ms BIGINT,
-    duration_seconds BIGINT,
-    status TEXT,
-    transcript JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
-```
+### एंटरप्राइज CRM टेबल्स (Supabase PostgreSQL):
+- `public.leads`: 10,000+ लीड कतार व स्टेट मशीन (`pending`, `in_progress`, `scheduled_callback`, `meeting_booked`, `not_interested`, `dnd`)।
+- `public.call_logs`: व्हिस्पर STT टर्न-बाय-टर्न ट्रांसक्रिप्ट JSONB, Qwen LLM बिज़नेस समरी, इंटेंट, सेंटिमेंट।
+- `public.scheduled_callbacks`: ऑटोनॉमस प्रिसिजन फॉलो-अप इंजन (जैसे 'कल शाम 4:00 बजे')।
+- `public.meeting_bookings`: रणनीतिक 30-मिनट क्लाइंट मीटिंग क्लोजिंग।
+- `public.action_tickets`: रिफंड रिक्वेस्ट व AMC SLA वारंटी क्लॉज़ ट्रैकिंग।
+
 
 ---
 

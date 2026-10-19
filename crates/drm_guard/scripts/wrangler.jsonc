@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shambhavi-drm-guard",
+  "main": "universal_licensing_worker.js",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shambhavi-drm-db",
+      "database_id": "6ed441d5-0641-438a-90d6-882c8ae7176c"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "DRM_KV",
+      "id": "b9d476d5a2844b10a6da1271296aa529"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "*",
+    "DRM_SIGNING_SEED": "SHAMBHAVI_AI_LABS_ROOT_SEED_2026"
+  }
+}

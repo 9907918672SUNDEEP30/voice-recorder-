@@ -190,3 +190,16 @@ sequenceDiagram
     User->>Telephony: Hangup {"event": "stop"}
     Telephony->>Orch: Terminate Session
 ```
+
+---
+
+## 5. Supabase Cloud PostgreSQL CRM Subsystem (`src/supabase.rs`)
+- **Database Engine:** Supabase PostgreSQL Cloud (Project `kbrfcrhioqdnhznkpseb`).
+- **CRM Tables:**
+  1. `public.leads`: 10,000+ lead queue with state machine (`pending`, `in_progress`, `scheduled_callback`, `meeting_booked`, `not_interested`, `dnd`).
+  2. `public.call_logs`: Whisper STT turn-by-turn transcript JSONB, Qwen LLM concise business summary, customer intent, sentiment, disposition.
+  3. `public.scheduled_callbacks`: Precision callback engine (e.g. *tomorrow 4:00 PM*).
+  4. `public.meeting_bookings`: Strategic 30-minute meetings with calendar integration.
+  5. `public.action_tickets`: Refund requests, AMC SLA claims, and policy clause citations.
+- **Fail-Closed Persistence:** All calls logged locally as audit JSON, and synced via async connection pooling to Supabase Cloud with sub-5ms indexed queries.
+

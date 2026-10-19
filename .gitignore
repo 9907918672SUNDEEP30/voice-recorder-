@@ -39,3 +39,8 @@ secrets/
 output/omnichannel_content/*.wav
 output/omnichannel_content/*.mp4
 output/
+
+# Wrangler & Node artifacts
+.wrangler/
+node_modules/
+
