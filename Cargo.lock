@@ -2277,6 +2277,7 @@ dependencies = [
  "chrono",
  "clap",
  "core_engine",
+ "dotenvy",
  "ed25519-dalek",
  "hex",
  "rand 0.8.8",

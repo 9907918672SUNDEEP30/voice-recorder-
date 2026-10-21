@@ -53,10 +53,21 @@ struct Args {
     /// Cloudflare Worker Licensing Endpoint URL
     #[arg(short, long)]
     worker_url: Option<String>,
+
+    /// Local document storage directory to auto-scan & index (Configurable via RAG_STORAGE_DIR in .env or --storage-dir)
+    #[arg(short = 's', long, env = "RAG_STORAGE_DIR", default_value = "D:/ragapp")]
+    storage_dir: PathBuf,
+
+    /// Watcher scan interval in seconds (Configurable via RAG_WATCHER_INTERVAL_SECS in .env or --interval)
+    #[arg(long, env = "RAG_WATCHER_INTERVAL_SECS", default_value_t = 3)]
+    watcher_interval_secs: u64,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // 0. Load .env file (Environment-Friendly configuration)
+    let _ = dotenvy::dotenv();
+
     // 1. Initialize Tracing Subscriber
     tracing_subscriber::registry()
         .with(
@@ -85,6 +96,7 @@ async fn main() -> Result<()> {
     println!("     PURE RUST LOCAL RAG DOCUMENT SEARCH & SME CRM VAULT        ");
     println!("=================================================================");
     println!(" 0% Python | Zero External SaaS | AES-256 Vault | DirectML ONNX ");
+    println!(" 2026 Contextual Hybrid RAG: Dense HNSW + Okapi BM25 + RRF Fusion");
     println!("-----------------------------------------------------------------");
 
     // 2. Initialize DRM Guard & Hardware Binding
@@ -124,7 +136,12 @@ async fn main() -> Result<()> {
         crm,
     )?);
 
-    // 5. Build Axum Web Application
+    // 5. Spawn Autonomous Storage Directory Watcher (Environment-friendly)
+    println!(" 📂 Monitored Storage Directory: {:?}", args.storage_dir);
+    println!(" ⏱️ Auto-Scan Polling Interval:  Every {} seconds", args.watcher_interval_secs);
+    engine.clone().spawn_directory_watcher(args.storage_dir.clone(), args.watcher_interval_secs);
+
+    // 6. Build Axum Web Application
     let app = build_router(engine);
 
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
@@ -139,3 +156,4 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
