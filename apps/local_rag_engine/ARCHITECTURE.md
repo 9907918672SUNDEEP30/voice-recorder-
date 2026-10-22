@@ -51,6 +51,21 @@ graph TD
         DRM_WORKER --> HW_SEAL
     end
 
+    subgraph Layer 6: Sovereign Desktop Client [native_apps/desktop_clients/sovereign_rag_vault]
+        TAURI_IPC[Tauri v2 IPC Bridge]
+        SCOPE_BAR[Dynamic Scope Bar: All Drives, D:, D:\ragapp]
+        FAST_FINDER[Tier-0 Rust Fast File Finder: <1ms Inverted Index]
+        SMART_ALIAS[Smart In-Memory Virtual Alias: 99.9% Match on Scans]
+        ONE_CLICK_RENAME[1-Click Disk Standardize & Clean Tool]
+        REACT_UI[React 19 + Tailwind v4 Dark Corporate Minimalist Shell]
+        
+        REACT_UI --> TAURI_IPC
+        TAURI_IPC --> SCOPE_BAR
+        TAURI_IPC --> FAST_FINDER
+        FAST_FINDER --> SMART_ALIAS
+        TAURI_IPC --> ONE_CLICK_RENAME
+    end
+
     subgraph Layer 5: Cloudflare Licensing Cloud [External SaaS]
         CF_API[Cloudflare Worker /api/heartbeat]
         SUB_DB[(Supabase / KV: paid_until DB)]

@@ -11,6 +11,7 @@ members = [
     "apps/video_studio",
     "apps/voice_agent",
     "apps/content_engine",
+    "apps/cdm_engine",
     "crates/core",
     "crates/core_engine",
     "crates/drm_guard",

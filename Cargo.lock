@@ -488,6 +488,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "cdm_engine"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "ai_core",
+ "anyhow",
+ "chrono",
+ "clap",
+ "drm_guard",
+ "ed25519-dalek",
+ "hex",
+ "rand 0.8.8",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "walkdir",
+ "zeroize",
+]
+
+[[package]]
 name = "cexpr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

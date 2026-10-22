@@ -1,0 +1,49 @@
+[package]
+name = "cdm_engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sandeep Ji & AI Core Engineering Team"]
+description = "Deterministic Context-Data Matrix (CDM) Engine - Zero RAG, Single Model Qwen2-VL-2B, 25-Year Lifespan"
+
+[dependencies]
+# Embedded Database (Local-First)
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Asynchronous Runtime & File Operations
+tokio = { version = "1.38", features = ["full"] }
+tokio-util = "0.7.11"
+walkdir = "2.5"
+
+# Cryptography, Hardware Security & Immutable Audit Logging
+sha2 = "0.10"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+zeroize = { version = "1.8", features = ["derive"] }
+aes-gcm = "0.10"
+rand = "0.8"
+ed25519-dalek = { version = "2.1", default-features = false }
+
+# Serialization & CLI
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.5", features = ["derive", "env"] }
+anyhow = "1.0"
+
+# AI Core Framework Modules
+ai_core = { path = "../../crates/core" }
+drm_guard = { path = "../../crates/drm_guard" }
+
+[dev-dependencies]
+tempfile = "3.10"
+
+[[bin]]
+name = "cdm_engine"
+path = "src/main.rs"
+
+# Anti-Reverse Engineering & Binary Obfuscation
+[profile.release]
+opt-level = "z"        # Maximize binary size reduction & code obfuscation
+lto = true             # Whole-program Link Time Optimization
+codegen-units = 1      # Maximize symbol elimination
+panic = "abort"        # Prevent debug stack traces
+strip = true           # Strip all native symbols, function names, and line numbers

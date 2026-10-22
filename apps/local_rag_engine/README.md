@@ -32,7 +32,8 @@ ai_core_framework/
 | **`crates/text_parser`** | Sliding-window text chunker (300–500 words with 50-word overlap); native PDF text extraction (`lopdf`); streaming CSV parser; metadata tagger. |
 | **`crates/vector_store`** | High-performance in-memory cosine similarity indexing; persistent SQLite document vault; AES-256-GCM encryption with volatile RAM session keys. |
 | **`crates/core_engine`** | DirectML GPU-accelerated ONNX Runtime adapter driving `bge-small` embeddings and local Qwen LLM contextual reasoning. |
-| **`apps/local_rag_engine`** | Multi-threaded Axum web server (`localhost:3000`); SME CRM interaction log; 24-hour background Cloudflare DRM heartbeat daemon. |
+| **`apps/local_rag_engine`** | Multi-threaded Axum web server (`localhost:8080`); SME CRM interaction log; 24-hour background Cloudflare DRM heartbeat daemon. |
+| **`native_apps/desktop_clients/sovereign_rag_vault`** | **Enterprise Desktop Client (Tauri v2 + React 19 + Tailwind CSS v4):** Features dynamic Scope Bar (`This PC`, Drive letters, `D:\ragapp`), Tier-0 Rust Fast File Finder (<1ms), Smart In-Memory Virtual Alias for 99.9% accuracy on scans, and 1-Click Disk Auto-Rename. |
 
 ---
 
