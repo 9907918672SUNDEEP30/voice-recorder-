@@ -36,9 +36,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "SET_TAURI_UPDATER_PUBLIC_KEY_HERE",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDOEVERDc4MTNFMEM4QjAKUldTd3lPQVRlTjJPbkRKa2hRRjVjTE8ySXRJWE5ZRTF3ODJGM3NKSVZKSWNOTnd1d2tNSHlBcS8K",
       "endpoints": [
-        "https://github.com/shambhavi-ai-labs/sovereign-vaults/releases/download/file-finder-latest/latest.json"
+        "https://github.com/9907918672SUNDEEP30/voice-recorder-/releases/download/file-finder-latest/latest.json"
       ]
     }
   }

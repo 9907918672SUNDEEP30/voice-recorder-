@@ -35,6 +35,11 @@ recordings/
 .env
 secrets/
 
+# Tauri Updater Signing Keys — NEVER push private key
+updater.key
+*.key
+!*.key.pub
+
 # Generated media outputs (large files)
 output/omnichannel_content/*.wav
 output/omnichannel_content/*.mp4
