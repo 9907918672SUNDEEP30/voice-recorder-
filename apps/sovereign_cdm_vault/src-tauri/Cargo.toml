@@ -1,0 +1,48 @@
+[package]
+name = "sovereign_cdm_vault"
+version = "0.1.0"
+description = "Shambhavi Sovereign CDM Vault — 25-Year Zero-RAG Context-Data Matrix"
+authors = ["Sandeep Ji & AI Core Engineering Team"]
+edition = "2021"
+
+[workspace]
+
+[lib]
+name = "sovereign_cdm_vault_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+tauri-plugin-dialog = "2.0.0"
+tauri-plugin-fs = "2.0.0"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+walkdir = "2.5"
+sha2 = "0.10"
+hex = "0.4"
+zeroize = { version = "1.8", features = ["derive"] }
+anyhow = "1.0"
+rayon = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+
+# SQLite & Cryptography
+rusqlite = { version = "0.31", features = ["bundled"] }
+aes-gcm = "0.10"
+rand = "0.8"
+ed25519-dalek = { version = "2.1", default-features = false }
+
+# Standalone CDM Core Engine
+cdm_engine = { path = "../../cdm_engine" }
+ort = { version = "=2.0.0-rc.6", default-features = false }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

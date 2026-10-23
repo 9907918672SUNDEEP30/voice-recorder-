@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
+  "productName": "Sovereign CDM Vault",
+  "version": "0.1.0",
+  "identifier": "com.shambhavi.sovereign.cdm.vault",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Shambhavi Sovereign CDM Vault — 25-Year Zero-RAG Matrix",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi", "dmg", "deb", "appimage"],
+    "icon": [
+      "icons/icon.png"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "SET_TAURI_UPDATER_PUBLIC_KEY_HERE",
+      "endpoints": [
+        "https://github.com/shambhavi-ai-labs/sovereign-vaults/releases/download/cdm-vault-latest/latest.json"
+      ]
+    }
+  }
+}

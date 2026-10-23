@@ -1,5 +1,5 @@
 # 🧭 AI Core Framework — Master System State & Agent Index (SYSTEM_STATE.md)
-> **Single Source of Truth (SSOT)** for AI Core Framework & All 8 Applications.  
+> **Single Source of Truth (SSOT)** for AI Core Framework, All 10 Applications & 3 Sovereign Desktop Clients.  
 > **Mandatory Agent Rule:** Read this file first. Do NOT perform repetitive codebase scans. Update this file immediately whenever changes occur.
 
 ---
@@ -16,7 +16,9 @@
 | **GPU Acceleration** | DirectML / ONNX Runtime (DirectX 12) + Candle SD-Turbo Safetensors |
 | **Security Layer** | AES-256-GCM Memory Encryption + `ZeroizeOnDrop` Volatile Scrubbing |
 | **Licensing Layer** | `crates/drm_guard` (24h Rotating Lease + 10m Heartbeat Ping + OTA) |
-| **Total Apps** | 8 Applications (Modular Workspace Members) |
+| **Total Apps** | 10 Applications (8 Autonomous Engines + CDM Vault + Fast File Finder) |
+| **Desktop Clients** | 3 Standalone Tauri v2 Clients (`sovereign_file_finder`, `sovereign_rag_vault`, `sovereign_cdm_vault`) |
+| **Multi-OS CI/CD** | GitHub Actions Matrix: Windows (.exe+.msi), macOS (Universal .dmg), Linux (.AppImage+.deb) |
 
 ---
 

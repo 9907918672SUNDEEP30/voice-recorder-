@@ -43,4 +43,5 @@ output/
 # Wrangler & Node artifacts
 .wrangler/
 node_modules/
+dist/
 
