@@ -75,11 +75,12 @@ async fn main() -> Result<()> {
     }
 
     // 4. Autonomous Background Watcher Daemon
-    let watcher = SourceDocsWatcher::new(workspace.clone());
+    let extractor = Arc::new(cdm_engine::VisionExtractor::new());
+    let watcher = SourceDocsWatcher::new(workspace.clone(), extractor);
     println!("🚀 [DAEMON STARTED] Watching for incoming PDFs in: {:?}", workspace.source_docs_dir);
     println!("   Drop files into 'source_docs/' to automatically ingest into Context-Data Matrix.");
 
-    watcher.run_loop(args.poll_ms).await?;
+    watcher.start_polling_loop().await?;
 
     Ok(())
 }

@@ -500,6 +500,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "rand 0.8.8",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3694,6 +3695,19 @@ dependencies = [
  "hashlink",
  "libsqlite3-sys",
  "smallvec",
+]
+
+[[package]]
+name = "rust_file_finder"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tokio",
+ "walkdir",
 ]
 
 [[package]]

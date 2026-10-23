@@ -12,6 +12,7 @@ members = [
     "apps/voice_agent",
     "apps/content_engine",
     "apps/cdm_engine",
+    "apps/rust_file_finder",
     "crates/core",
     "crates/core_engine",
     "crates/drm_guard",
