@@ -65,6 +65,54 @@
 3. **Zero-Click Customer Updates:**
    - Running app detects updated `latest.json`, downloads signed payload in background, replaces binary in-place, and restarts without manual customer intervention.
 
+## 🔧 2. CI/CD Pipeline Debug Log (2026-10-23)
+
+> **Session Goal:** तीनों ऐप्स के GitHub Actions builds को 100% pass कराना
+
+### ❌ Build Attempt #1 — FAILED (Step 7: Tauri Build)
+| Error | Root Cause | Fix Applied |
+|-------|-----------|-------------|
+| `TAURI_SIGNING_PRIVATE_KEY` missing | GitHub Secret सेट नहीं था | ✅ Ed25519 key pair generated via `npx @tauri-apps/cli signer generate` |
+| `pubkey: "SET_TAURI_UPDATER_PUBLIC_KEY_HERE"` | Placeholder key in `tauri.conf.json` | ✅ Real public key set in all 3 `tauri.conf.json` |
+| Wrong updater endpoint URL | `shambhavi-ai-labs/sovereign-vaults` → should be `9907918672SUNDEEP30/voice-recorder-` | ✅ Corrected in all 3 apps |
+| Private key committed to Git | Security risk | ✅ Added `updater.key` to `.gitignore` |
+
+**Commit:** `fix: set real Ed25519 updater pubkey, correct endpoint URLs & protect private key in gitignore`
+
+### ❌ Build Attempt #2 — FAILED (Step 7: Tauri Build)
+| Error | Root Cause | Fix Applied |
+|-------|-----------|-------------|
+| `Found version mismatched Tauri packages` | NPM `@tauri-apps/api` resolved to `v2.12.4` but Rust crate `tauri` was `v2.0.0` | ✅ Pinned NPM packages to `~2.0.0` |
+| Same mismatch for `plugin-dialog` | NPM `v2.8.3` vs Rust `v2.0.0` | ✅ Pinned to `~2.0.0` |
+| Same mismatch for `plugin-fs` | NPM `v2.7.1` vs Rust `v2.0.0` | ✅ Pinned to `~2.0.0` |
+
+**Commit:** `fix: pin tauri-apps NPM packages to ~2.0.0 to match Rust crate v2.0.0`
+
+### ❌ Build Attempt #3 — FAILED (TypeScript Compilation)
+| Error | Root Cause | Fix Applied |
+|-------|-----------|-------------|
+| `Cannot find module '@tauri-apps/plugin-updater'` | NPM package not in `package.json` | ✅ Added `@tauri-apps/plugin-updater: ~2.0.0` to all 3 apps |
+| `Cannot find module '@tauri-apps/plugin-process'` | NPM package not in `package.json` | ✅ Added `@tauri-apps/plugin-process: ~2.0.0` to all 3 apps |
+| Missing Rust crates | `tauri-plugin-updater` & `tauri-plugin-process` not in `Cargo.toml` | ✅ Added to all 3 `Cargo.toml` |
+| Missing plugin registration | Plugins not registered in `lib.rs` Tauri builder | ✅ Added `.plugin(tauri_plugin_updater::init())` & `.plugin(tauri_plugin_process::init())` |
+| Missing capabilities | `updater:default` & `process:default` not in `default.json` | ✅ Added to all 3 `capabilities/default.json` |
+
+**Commit:** `fix: add missing plugin-updater and plugin-process (NPM + Rust + capabilities) for auto-update`
+
+### 🟢 Build Attempt #4 — IN PROGRESS (Awaiting Results)
+All known issues have been fixed across **4 layers × 3 apps = 12 files**:
+- ✅ `TAURI_SIGNING_PRIVATE_KEY` GitHub Secret set via `gh` CLI
+- ✅ Real Ed25519 public key in `tauri.conf.json`
+- ✅ Correct GitHub release endpoint URLs
+- ✅ NPM packages pinned to `~2.0.0` (matching Rust `v2.0.0`)
+- ✅ `plugin-updater` + `plugin-process` added (NPM + Rust + lib.rs + capabilities)
+
+### 🛠️ Infrastructure Setup During Session
+| Tool | Action |
+|------|--------|
+| GitHub CLI (`gh`) v2.103.0 | Downloaded ZIP, authenticated via device flow, used to set secrets & trigger workflows |
+| Ed25519 Signing Keys | Generated & stored: `updater.key` (private, gitignored) + `updater.key.pub` (committed) |
+
 ---
 
 ## 🔒 State Persistence Guarantee
