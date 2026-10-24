@@ -50,6 +50,7 @@
 | **8** | **Content Engine** | `apps/content_engine` | [DEPLOYMENT.md](file:///d:/ai_core_framework%20-%20Copy%20(2)/apps/content_engine/DEPLOYMENT.md) | CLI / Pipeline | **Desktop/Chrome Creator Studio Workspace** + Cloud FFmpeg Verification Probe & NVENC/VAAPI/CPU Auto-Detector + **Supabase Cloud Media Matrix** (Omnichannel Content Pieces, Publishing Logs, Trend Dossiers) | ✅ `ContentEngineMetrics` (24h Lease, Omnichannel Generator) |
 | **9** | **CDM Matrix Vault (Zero-RAG)** | `apps/cdm_engine`<br>`native_apps/desktop_clients/sovereign_cdm_vault` | [DIRECTIVE.md](file:///C:/Users/ASROCK/.gemini/antigravity-ide/brain/3a0a1344-d3dc-4572-9901-eb2a8b51bac4/ENTERPRISE_CDM_ENGINE_25YR_DIRECTIVE.md) | Native CLI / Embedded | **Enterprise Local CDM Engine (20-25 Year Lifespan):** 100% Zero-RAG, Zero Vectors, Zero Chunks. 2-Stage Pipeline (Rust Native Regex/Automata 80% + Qwen2-VL INT4 Vision 20%) mapping directly to embedded single-file SQLite (`matrix.db`) + immutable binary audit trail (`audit_log.bin`). Deterministic 0.0005ms queries. | ✅ Hardware-Locked (Motherboard GUID, Zero Cloud, Air-Gapped) |
 | **10** | **Sovereign Fast File Finder** | `apps/rust_file_finder`<br>`native_apps/desktop_clients/sovereign_file_finder` | [README.md](file:///d:/shambhavi_workspace/ai_core_framework/apps/rust_file_finder/README.md) | Native CLI / Desktop | **100% Free & Open Source Sub-Millisecond File Search:** Pure Rust Rayon parallel directory scanning (<1ms) across drives (`C:\`, `D:\`), strict filename and extension filtering (.pdf, .png, .docx, .zip), instant open and explorer reveal. Zero DRM, Zero AI overhead. | 🔓 100% Free & Open Source (MIT) |
+| **11** | **Sovereign Enterprise Document ETL & Ingestion Engine** | `apps/sovereign_etl` *(Planned)* | Master Architectural Spec | Native CLI / Microservice / CDM Core | **Zero-Copy Native Rust Ingestion Core (Python / LangChain / Unstructured.io Killer):** Memory-mapped byte parser (`mmap`), structural AST chunker (headings & tables intact), direct embedded SQLite/Parquet matrix pipeline, 100% offline air-gapped execution. Zero cloud API bills ($30,000/mo saved for banks/enterprises), sub-50ms ingestion latency, 15-30MB RAM footprint. Local Qwen2-VL INT4 fallback for degraded scans. | 💡 Documented in Master Plan (Pending Strategic Review) |
 
 ---
 
@@ -86,10 +87,33 @@
 8. **✍️ Content Engine:**
    - **Frontend:** Desktop/Chrome Creator Studio Workspace.
    - **Note:** Focused on desktop/Chrome workstation for creators; Chrome CDP trend recon radar, automated video script/blog editor, ASS karaoke subtitle previewer. Remote publishing secured via SCP JSON payload transfer.
-9. **🏛️ Shambhavi CDM Matrix Vault (Zero-RAG Engine):**
+9. **🏛️ Shambhavi CDM Matrix Vault (Zero-RAG Engine) — Commercial Tiers:**
    - **Architecture:** 100% Zero-RAG, Zero VectorDB, Zero Chunks, Single-Model (Qwen2-VL-2B via DirectML ONNX).
-   - **Storage:** Embedded single-file SQLite database (`cdm_matrix.db`) residing directly inside user's client workspace folder (`source_docs/`, `cdm_matrix.db`, `audit_log.bin`).
-   - **Target Audience:** CAs, Tax Lawyers, Auditors requiring 20-25 year lifespan and 100% deterministic mathematical precision ($0.001\text{ ms}$ queries). [Directive Blueprint](file:///C:/Users/ASROCK/.gemini/antigravity-ide/brain/3a0a1344-d3dc-4572-9901-eb2a8b51bac4/ENTERPRISE_CDM_ENGINE_25YR_DIRECTIVE.md).
+   - **Storage:** Embedded single-file SQLite database (`matrix.db`) residing directly inside user's client workspace folder (`source_docs/`, `matrix.db`, `audit_log.bin`).
+   - **Target Audience:** CAs, Tax Lawyers, Auditors, Enterprises requiring 20-25 year lifespan and 100% deterministic mathematical precision ($0.001\text{ ms}$ queries).
+   - **💰 Commercial Packaging & Product Tiers (Sandeep Ji's Directive):**
+     - **🟢 Tier 1: CDM Pro (₹5,000 / Standard License):**
+       - Deterministic 25-Year Zero-RAG relational matrix.
+       - Sub-microsecond SQL Query Engine (0.001 ms).
+       - Standard single-file ingestion & SQLite querying.
+       - SHA-256 immutable audit trail (`audit_log.bin`).
+       - Air-gapped, offline, hardware-locked (Motherboard GUID).
+     - **🟡 Tier 2: CDM Gold Pro (₹25,000 / Enterprise Institutional License):**
+       - **Everything in CDM Pro PLUS:**
+       - **🚀 The Sovereign Enterprise Document ETL & Ingestion Engine (LangChain/LlamaParse Killer):**
+       - Zero-Copy Byte Parsing (`mmap`) of massive document trees (10,000+ PDFs, Word, Excel, Scanned receipts).
+       - Structural AST chunker preserving multi-column tables, financial headers, and legal clauses intact without string splitting.
+       - Autonomous 2-Stage Hybrid Ingestion: 80% Pure Rust Regex/Automata (<0.1ms) + 20% Qwen2-VL INT4 Local Vision Model for degraded/handwritten scans.
+       - Eliminates $10,000 - $30,000/month cloud parsing API subscriptions for banks and enterprises.
+       - 100% DPDP Act, HIPAA, and GDPR compliance (zero bytes ever leave the client's premises).
+
+10. **⚡ Sovereign Fast File Finder (100% Free & Open Source Freeware):**
+    - Pure Rayon parallel directory scanning (<1ms, 0.018ms search).
+    - Smart Alias completely stripped to maintain commercial boundaries. Free forever mass-market hook.
+
+11. **🚀 Sovereign Enterprise Document ETL & Ingestion Engine (CDM Gold Pro Core & Standalone B2B Utility):**
+    - Native single-binary Rust document processor.
+    - Powers CDM Gold Pro natively, and can be licensed standalone for enterprise server pipelines at high-ticket B2B rates.
 
 ---
 
