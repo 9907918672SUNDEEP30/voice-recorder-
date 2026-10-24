@@ -4,7 +4,6 @@
 //! Sub-millisecond local file search, Smart In-Memory Alias, and 1-Click Auto-Rename.
 
 use crate::fast_finder::FastFileFinder;
-use crate::smart_alias::SmartAliasMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -170,19 +169,6 @@ pub async fn search_files(
             })
             .unwrap_or_else(|| "Unknown".to_string());
 
-        // Extract Smart Alias
-        let alias_meta: SmartAliasMetadata = state
-            .fast_finder
-            .smart_alias
-            .get_metadata(&path)
-            .unwrap_or_else(|| {
-                // If not extracted yet, extract from filename
-                state
-                    .fast_finder
-                    .smart_alias
-                    .extract_and_register(&path, &filename)
-            });
-
         let id = format!("{:x}", md5_hash(&path.to_string_lossy()));
 
         results.push(FileResultDto {
@@ -193,12 +179,12 @@ pub async fn search_files(
             size_bytes,
             size_formatted: format_size(size_bytes),
             modified_date,
-            smart_alias: Some(alias_meta.canonical_title),
-            client_name: alias_meta.client_name,
-            doc_type: Some(alias_meta.doc_type),
-            year: alias_meta.year,
-            needs_renaming: alias_meta.needs_renaming,
-            suggested_name: alias_meta.suggested_filename,
+            smart_alias: None,
+            client_name: None,
+            doc_type: None,
+            year: None,
+            needs_renaming: false,
+            suggested_name: None,
             match_score: 1.0,
         });
     }

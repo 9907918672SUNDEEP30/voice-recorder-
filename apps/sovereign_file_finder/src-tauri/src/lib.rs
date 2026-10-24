@@ -5,7 +5,6 @@
 
 pub mod fast_finder;
 pub mod ipc;
-pub mod smart_alias;
 
 use fast_finder::FastFileFinder;
 use ipc::{

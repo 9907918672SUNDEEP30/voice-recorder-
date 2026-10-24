@@ -2,7 +2,7 @@
 //!
 //! Run with: `cargo run -p rust_file_finder -- <folder_path> <query>`
 
-use rust_file_finder::{FastDirectoryScanner, SmartAliasEngine};
+use rust_file_finder::FastDirectoryScanner;
 use std::env;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -13,7 +13,7 @@ async fn main() {
 
     println!("=========================================================");
     println!("   ⚡ SOVEREIGN FAST FILE FINDER — 100% FREE & OPEN SOURCE");
-    println!("   Sub-millisecond Rust Search & Smart In-Memory Alias");
+    println!("   Sub-millisecond Parallel File & Directory Search");
     println!("=========================================================");
 
     let target_folder = if args.len() > 1 {
@@ -36,7 +36,6 @@ async fn main() {
 
     println!("🔍 Scanning scope: {}", target_folder);
     let scanner = FastDirectoryScanner::new();
-    let alias_engine = SmartAliasEngine::new();
 
     let scan_start = Instant::now();
     let count = scanner.scan_path(&path);
@@ -52,16 +51,10 @@ async fn main() {
 
         println!("🎯 Found {} matches in {:.3} ms\n", results.len(), search_elapsed);
 
-        for (idx, record) in results.iter().take(10).enumerate() {
-            let alias = alias_engine.resolve_alias(&record.path, None);
+        for (idx, record) in results.iter().take(20).enumerate() {
             println!("{}. {}", idx + 1, record.filename);
             println!("   Path: {}", record.path.display());
-            println!("   Smart Alias: {}", alias.canonical_title);
-            if alias.needs_renaming {
-                if let Some(ref suggested) = alias.suggested_filename {
-                    println!("   💡 Suggested Rename: {}", suggested);
-                }
-            }
+            println!("   Size: {} bytes", record.size_bytes);
             println!();
         }
     } else {

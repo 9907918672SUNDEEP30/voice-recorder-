@@ -3,7 +3,6 @@
 //! Sub-1ms parallel directory scanning and fast fuzzy matching.
 //! Bypasses heavy Windows Search Indexer entirely.
 
-use crate::smart_alias::SmartAliasEngine;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -22,7 +21,6 @@ pub struct IndexedFileRecord {
 #[derive(Clone)]
 pub struct FastFileFinder {
     index: Arc<RwLock<HashMap<PathBuf, IndexedFileRecord>>>,
-    pub smart_alias: SmartAliasEngine,
 }
 
 impl Default for FastFileFinder {
@@ -35,7 +33,6 @@ impl FastFileFinder {
     pub fn new() -> Self {
         Self {
             index: Arc::new(RwLock::new(HashMap::new())),
-            smart_alias: SmartAliasEngine::new(),
         }
     }
 
@@ -117,30 +114,15 @@ impl FastFileFinder {
         paths
     }
 
-    /// Fast Query Evaluator: Checks physical filenames AND in-memory Smart Aliases in <1ms
+    /// Pure Fast Filename Evaluator: Sub-millisecond in-memory filename token search
     pub fn find_fast_candidates(&self, query: &str) -> Vec<PathBuf> {
         let q = query.to_lowercase();
         let query_tokens: Vec<&str> = q.split_whitespace().collect();
 
-        // 1. Check Smart Virtual Aliases in RAM first (99.9% match on scans)
-        let alias_matches = self.smart_alias.search_by_alias(query);
-        let mut results: Vec<PathBuf> = Vec::new();
-        let mut seen = std::collections::HashSet::new();
-
-        for m in alias_matches {
-            seen.insert(m.physical_path.clone());
-            results.push(m.physical_path);
-        }
-
-        // 2. Direct filename keyword scan in RAM index
         let index = self.index.read().unwrap();
         let mut scored_matches: Vec<(PathBuf, usize)> = Vec::new();
 
         for (path, record) in index.iter() {
-            if seen.contains(path) {
-                continue;
-            }
-
             let fname_lower = record.filename.to_lowercase();
             let matched_count = query_tokens
                 .iter()
@@ -154,10 +136,6 @@ impl FastFileFinder {
 
         // Sort descending by token match count
         scored_matches.sort_by(|a, b| b.1.cmp(&a.1));
-        for (p, _) in scored_matches {
-            results.push(p);
-        }
-
-        results
+        scored_matches.into_iter().map(|(p, _)| p).collect()
     }
 }
