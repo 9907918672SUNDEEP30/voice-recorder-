@@ -23,6 +23,7 @@ pub struct MatrixEntityRecord {
 
 #[derive(Clone)]
 pub struct ContextDataMatrix {
+    #[allow(dead_code)]
     db_path: PathBuf,
     in_memory_records: Arc<Mutex<Vec<MatrixEntityRecord>>>,
 }

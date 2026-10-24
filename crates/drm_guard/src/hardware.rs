@@ -4,6 +4,8 @@
 //! hardware identifiers (CPU ID, Motherboard serial/UUID, and system machine ID).
 
 use sha2::{Digest, Sha256};
+#[cfg(target_os = "windows")]
+use std::process::Command;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MachineFingerprint {
