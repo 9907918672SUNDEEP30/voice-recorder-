@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
-  "productName": "Sovereign Fast File Finder",
+  "productName": "sovereign-fast-file-finder",
   "version": "1.0.0",
   "identifier": "com.sovereign.fast.file.finder",
   "build": {
