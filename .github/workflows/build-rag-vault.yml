@@ -7,7 +7,6 @@ on:
     paths:
       - 'apps/sovereign_rag_vault/**'
       - 'apps/local_rag_engine/**'
-      - 'crates/**'
       - '.github/workflows/build-rag-vault.yml'
   workflow_dispatch:
 

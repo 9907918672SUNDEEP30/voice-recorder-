@@ -5,6 +5,7 @@
 //! Never writes the key to disk. Automatically zeroes memory on drop.
 
 use sha2::{Digest, Sha256};
+#[cfg(target_os = "windows")]
 use std::process::Command;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
