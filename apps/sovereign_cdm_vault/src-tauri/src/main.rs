@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    sovereign_rag_vault_lib::run();
+    sovereign_cdm_vault_lib::run();
 }

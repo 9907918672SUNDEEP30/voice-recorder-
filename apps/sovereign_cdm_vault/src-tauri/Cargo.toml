@@ -37,10 +37,8 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 aes-gcm = "0.10"
 rand = "0.8"
 ed25519-dalek = { version = "2.1", default-features = false }
+drm_guard = { path = "../../../crates/drm_guard" }
 
-# Standalone CDM Core Engine
-cdm_engine = { path = "../../cdm_engine" }
-ort = { version = "=2.0.0-rc.6", default-features = false }
 
 [profile.release]
 opt-level = "z"

@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default capabilities for Sovereign RAG Vault","local":true,"windows":["main"],"permissions":["core:default","dialog:default","fs:default"]}}
+{"default":{"identifier":"default","description":"Default capabilities for Sovereign RAG Vault","local":true,"windows":["main"],"permissions":["core:default","dialog:default","fs:default","updater:default","process:default"]}}
