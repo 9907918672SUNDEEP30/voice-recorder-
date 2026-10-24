@@ -224,7 +224,7 @@ impl OtaUpdater {
             .ok_or_else(|| anyhow!("Cannot determine parent directory of current executable"))?;
 
         let staged_new = parent_dir.join(format!(".update_new_{}.tmp", std::process::id()));
-        let backup_old = parent_dir.join(format!("{}.old", current_exe.file_name().and_then(|n| n.to_str()).unwrap_or("app")));
+        let _backup_old = parent_dir.join(format!("{}.old", current_exe.file_name().and_then(|n| n.to_str()).unwrap_or("app")));
 
         // 1. Write the new binary to a temporary staging file first
         std::fs::write(&staged_new, new_binary_bytes)

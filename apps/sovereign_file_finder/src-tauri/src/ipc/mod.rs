@@ -236,13 +236,27 @@ pub fn open_file(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// IPC: Reveals a target file in Windows File Explorer
+/// IPC: Reveals a target file in File Explorer / Finder / Linux File Manager
 #[tauri::command]
 pub fn open_file_folder(file_path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         let _ = Command::new("explorer")
             .args(["/select,", &file_path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = Command::new("open")
+            .args(["-R", &file_path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = Command::new("xdg-open")
+            .args([&file_path])
             .spawn()
             .map_err(|e| e.to_string())?;
     }
